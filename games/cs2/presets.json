@@ -1,0 +1,51 @@
+[
+  {
+    "key": "mode-winrate",
+    "title": "各模式胜率",
+    "grain": "round_side",
+    "dimensions": ["entity"],
+    "metrics": ["win_rate", "rounds"],
+    "labels": { "entity": "模式" }
+  },
+  {
+    "key": "player-mode",
+    "title": "玩家 × 模式",
+    "grain": "round_side",
+    "dimensions": ["player", "entity"],
+    "metrics": ["win_rate", "rounds"],
+    "labels": { "entity": "模式" }
+  },
+  {
+    "key": "player-mode-matchup",
+    "title": "玩家A的模式 vs 玩家B的模式",
+    "grain": "round_side",
+    "dimensions": ["player", "entity", "opponent", "opponentEntity"],
+    "metrics": ["win_rate", "rounds"],
+    "labels": { "entity": "模式", "opponentEntity": "对手模式" },
+    "minDen": 2
+  },
+  {
+    "key": "player-vs-player",
+    "title": "玩家 vs 玩家",
+    "grain": "series_player",
+    "dimensions": ["player", "opponent"],
+    "metrics": ["series_win_rate", "draw_rate", "series_count", "net_score"],
+    "sortBy": "series_count"
+  },
+  {
+    "key": "monthly",
+    "title": "按月看各模式胜率",
+    "grain": "round_side",
+    "dimensions": ["month", "entity"],
+    "metrics": ["win_rate", "rounds"],
+    "labels": { "entity": "模式" }
+  },
+  {
+    "key": "scoreboard",
+    "title": "总榜：场次 / 胜率 / 场均净胜局",
+    "grain": "series_player",
+    "dimensions": ["player"],
+    "metrics": ["series_count", "series_win_rate", "net_score"],
+    "sortBy": "series_count"
+  }
+]

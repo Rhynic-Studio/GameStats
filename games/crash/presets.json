@@ -1,0 +1,116 @@
+[
+  {
+    "key": "funnel",
+    "title": "角色漏斗：进池 → ban → pick → 上场 → 胜",
+    "grain": "series_entity",
+    "dimensions": ["entity"],
+    "metrics": ["pool_rate", "ban_rate", "pick_rate", "play_rate", "win_rate"],
+    "sortBy": "win_rate"
+  },
+  {
+    "key": "ban-slots",
+    "title": "槽位级 BP：第几个位置被 ban / 被 pick",
+    "grain": "series_slot",
+    "dimensions": ["slot", "entity"],
+    "metrics": ["slot_share", "times"],
+    "sortBy": "times"
+  },
+  {
+    "key": "char-winrate",
+    "title": "角色上场胜率",
+    "grain": "round_side",
+    "dimensions": ["entity"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "matchup",
+    "title": "角色对角色 对位胜率",
+    "grain": "round_side",
+    "dimensions": ["entity", "opponentEntity"],
+    "metrics": ["win_rate", "rounds"]
+  },
+
+  {
+    "key": "buff-split",
+    "title": "劣势加强：带加强 / 无加强 的胜率",
+    "grain": "round_side",
+    "dimensions": ["buff"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "buff-level",
+    "title": "加强层数 × 胜率",
+    "grain": "round_side",
+    "dimensions": ["buffLevel"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "buff-edge",
+    "title": "双方加强差 × 胜率",
+    "grain": "round_side",
+    "dimensions": ["buffEdge"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "buff-char",
+    "title": "角色 × 加强分层 胜率",
+    "grain": "round_side",
+    "dimensions": ["entity", "buffLevel"],
+    "metrics": ["win_rate", "rounds"]
+  },
+
+  {
+    "key": "player-char",
+    "title": "玩家 × 角色",
+    "grain": "round_side",
+    "dimensions": ["player", "entity"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "player-char-matchup",
+    "title": "玩家×角色 vs 玩家×角色",
+    "grain": "round_side",
+    "dimensions": ["player", "entity", "opponent", "opponentEntity"],
+    "metrics": ["win_rate", "rounds"],
+    "minDen": 2
+  },
+  {
+    "key": "player-vs-player",
+    "title": "玩家 vs 玩家（BO）",
+    "grain": "series_player",
+    "dimensions": ["player", "opponent"],
+    "metrics": ["series_win_rate", "draw_rate", "series_count", "net_score"],
+    "sortBy": "series_count"
+  },
+  {
+    "key": "player-buff",
+    "title": "玩家 × 加强层数 胜率",
+    "grain": "round_side",
+    "dimensions": ["player", "buffLevel"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "comeback",
+    "title": "首轮败后翻盘率",
+    "grain": "series_player",
+    "dimensions": ["player"],
+    "metrics": ["comeback_rate", "series_count"],
+    "sortBy": "series_count"
+  },
+
+  {
+    "key": "initiative",
+    "title": "先攻 × BP顺位 的胜率",
+    "grain": "round_side",
+    "dimensions": ["initiative", "bpFirst"],
+    "metrics": ["win_rate", "rounds"]
+  },
+  {
+    "key": "bp-advantage",
+    "title": "BP 先手方优势（系列赛级）",
+    "grain": "series_player",
+    "dimensions": ["ruleset", "bpFirst"],
+    "metrics": ["series_win_rate", "series_count"],
+    "sortBy": "series_count"
+  }
+]
