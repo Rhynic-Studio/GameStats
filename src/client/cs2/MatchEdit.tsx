@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, type Lists } from '../common/api.ts';
+import { cs2, type Cs2Lists } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
 import { roundsOf, type ListItem } from '../../shared/types.ts';
 
@@ -15,7 +15,7 @@ function defaultRows(mode: ListItem | undefined, items: ListItem[]) {
 export default function MatchEdit() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [lists, setLists] = useState<Lists | null>(null);
+  const [lists, setLists] = useState<Cs2Lists | null>(null);
   const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 10));
   const [playerA, setPlayerA] = useState('');
   const [playerB, setPlayerB] = useState('');
@@ -26,10 +26,10 @@ export default function MatchEdit() {
 
   useEffect(() => {
     (async () => {
-      const l = await api.lists();
+      const l = await cs2.lists();
       setLists(l);
       if (id) {
-        const m = await api.match(Number(id));
+        const m = await cs2.match(Number(id));
         setPlayedAt(m.playedAt);
         setPlayerA(m.playerA.name);
         setPlayerB(m.playerB.name);
@@ -64,8 +64,8 @@ export default function MatchEdit() {
     setErr(null);
     try {
       const body = { playedAt, playerA, playerB, modeId, note, entries: parsed };
-      if (id) await api.updateMatch(Number(id), body);
-      else await api.createMatch(body);
+      if (id) await cs2.update(Number(id), body);
+      else await cs2.create(body);
       nav('/cs2');
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));

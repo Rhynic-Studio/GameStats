@@ -256,7 +256,9 @@ export function stats(playerId?: number, opponentId?: number): StatTable[] {
 
   return [
     {
-      key: 'mode-rate',
+      kind: 'grid',
+      navKey: 'mode-rate',
+      navLabel: '单挑胜率',
       title: '单挑胜率',
       columns: [
         { key: '单挑', label: '单挑', kind: 'list' },
@@ -266,7 +268,9 @@ export function stats(playerId?: number, opponentId?: number): StatTable[] {
       rows: modeRows,
     },
     {
-      key: 'item-rate',
+      kind: 'grid',
+      navKey: 'item-rate',
+      navLabel: '项目胜率',
       title: '项目胜率',
       columns: [
         { key: '项目', label: '项目', kind: 'list' },
@@ -276,8 +280,10 @@ export function stats(playerId?: number, opponentId?: number): StatTable[] {
       rows: itemRows,
     },
     {
-      key: 'solo-win',
-      group: '高阶数据',
+      kind: 'grid',
+      navKey: 'solo-win',
+      navGroup: '高阶数据',
+      navLabel: 'solo三项项目优胜',
       title: 'solo三项项目优胜',
       columns: [
         { key: '项目', label: '项目', kind: 'list' },

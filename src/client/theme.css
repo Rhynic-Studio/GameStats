@@ -364,3 +364,97 @@ label.field {
   align-items: center;
   gap: 8px;
 }
+
+.scroll-x {
+  overflow-x: auto;
+}
+
+table.matrix th,
+table.matrix td {
+  padding: 5px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+table.matrix .sticky-col {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  border-right: 1px solid var(--line);
+}
+
+table.matrix thead .sticky-col {
+  background: #fafbfc;
+  z-index: 1;
+}
+
+table.matrix tbody tr:hover .sticky-col {
+  background: #fafbfc;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+button.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+button.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.chip.used {
+  background: #f2f4f6;
+  color: #a5abb4;
+  text-decoration: line-through;
+}
+
+tr.current-row td {
+  background: #f5f8ff;
+}
+
+.round-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.round-block + .round-block {
+  margin-top: 10px;
+}
+
+.round-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tag {
+  font-size: 12px;
+  background: #f2f4f6;
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--muted);
+}
+
+.tag.done {
+  background: #e7f5ec;
+  color: #1a7f42;
+}
+
+button.quiet {
+  white-space: nowrap;
+}
+
+/* BP 表的撤销列 */
+table td:last-child button {
+  white-space: nowrap;
+}

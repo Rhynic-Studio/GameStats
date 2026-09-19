@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, type Lists } from '../common/api.ts';
+import { cs2, type Cs2Lists } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
 import { roundsOf } from '../../shared/types.ts';
 import type { MatchDetail } from '../../shared/types.ts';
@@ -9,11 +9,11 @@ export default function MatchView() {
   const { id } = useParams();
   const nav = useNavigate();
   const [m, setM] = useState<MatchDetail | null>(null);
-  const [lists, setLists] = useState<Lists | null>(null);
+  const [lists, setLists] = useState<Cs2Lists | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([api.match(Number(id)), api.lists()])
+    Promise.all([cs2.match(Number(id)), cs2.lists()])
       .then(([mm, ll]) => {
         setM(mm);
         setLists(ll);

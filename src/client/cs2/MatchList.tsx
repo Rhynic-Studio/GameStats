@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../common/api.ts';
+import { cs2 } from '../common/api.ts';
 import { Card, TopBar } from '../common/Card.tsx';
 import type { MatchSummary } from '../../shared/types.ts';
 
@@ -11,7 +11,7 @@ export default function MatchList() {
   const [desc, setDesc] = useState(true);
 
   useEffect(() => {
-    api.matches().then(setMatches).catch((e) => setErr(String(e.message ?? e)));
+    cs2.matches().then(setMatches).catch((e) => setErr(String(e.message ?? e)));
   }, []);
 
   const rank = (m: MatchSummary, key: string): number | string => {
@@ -52,7 +52,7 @@ export default function MatchList() {
 
   return (
     <div className="page">
-      <TopBar current="list" />
+      <TopBar game="cs2" name="CS2 单挑" current="list" />
 
       <Card
         title="对局记录"
