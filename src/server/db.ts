@@ -97,19 +97,19 @@ const CS2_ITEMS = ['手枪', '长枪', '狙击'];
 const CS2_MODES = ['手枪单挑', '长枪单挑', '狙击单挑', 'solo三项'];
 const CRASH_ROLES: { name: string; color: string }[] = [
   { name: '艾娅', color: '2b3a55' },
-  { name: '卫冕冠军 妮妮', color: 'cf7b8e' },
-  { name: '妮娜·安赫玛托娃', color: '4a7fa5' },
-  { name: '苍玉露世', color: '3f5fa8' },
+  { name: '卫冕冠军 妮妮', color: 'c9758c' },
+  { name: '妮娜·安赫玛托娃', color: '9c3f63' },
+  { name: '苍玉露世', color: '4a7fa5' },
   { name: '玄华妖姬', color: '7a5aa8' },
-  { name: '伊诗·努·阿兰', color: '3f7a4a' },
+  { name: '伊诗·努·阿兰', color: '4a7c3f' },
   { name: '最后的大德鲁伊', color: '5a5aa8' },
   { name: '商旅香诺尔', color: '2f5d4a' },
-  { name: '怪盗x黑猫', color: '9e3b3b' },
-  { name: '菲尼伽涅维娜', color: '2f6f8f' },
+  { name: '怪盗x黑猫', color: 'b8860b' },
+  { name: '菲尼伽涅维娜', color: '9e3b3b' },
   { name: '偶像N.A.G.I', color: 'a86b93' },
-  { name: '菲尼斯涅维娜', color: '7a828c' },
-  { name: '骇客娜吉尼', color: '8a6f4a' },
-  { name: '芙芙', color: '5f7a8a' },
+  { name: '菲尼斯涅维娜', color: '2f6f8f' },
+  { name: '骇客娜吉尼', color: '1f4a34' },
+  { name: '芙芙', color: '7a828c' },
 ];
 
 let _db: DatabaseSync | null = null;
