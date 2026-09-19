@@ -37,3 +37,19 @@ export function Crumbs({ items }: { items: { label: string; to?: string }[] }) {
     </div>
   );
 }
+
+export function TopBar({ current }: { current: 'list' | 'stats' }) {
+  return (
+    <div className="topbar">
+      <div className="crumbs">
+        <a href="/">游戏</a>
+        <span className="sep">/</span>
+        CS2 单挑
+      </div>
+      <nav>
+        {current === 'list' ? <span>对局记录</span> : <a href="/cs2">对局记录</a>}
+        {current === 'stats' ? <span>统计</span> : <a href="/cs2/stats">统计</a>}
+      </nav>
+    </div>
+  );
+}

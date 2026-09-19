@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../common/api.ts';
-import { Card, Crumbs } from '../common/Card.tsx';
+import { Card, TopBar } from '../common/Card.tsx';
 import type { MatchSummary } from '../../shared/types.ts';
 
 export default function MatchList() {
@@ -52,17 +52,14 @@ export default function MatchList() {
 
   return (
     <div className="page">
-      <Crumbs items={[{ label: '游戏', to: '/' }, { label: 'CS2 单挑' }]} />
+      <TopBar current="list" />
 
       <Card
         title="对局记录"
         actions={
-          <>
-            <Link to="/cs2/stats">统计</Link>
-            <Link to="/cs2/new">
-              <button className="primary">+ 新的一场</button>
-            </Link>
-          </>
+          <Link to="/cs2/new">
+            <button className="primary">+ 新的一场</button>
+          </Link>
         }
         flush
       >
@@ -75,7 +72,7 @@ export default function MatchList() {
             <thead>
               <tr>
                 <th onClick={() => click('playedAt')}>日期{arrow('playedAt')}</th>
-                <th onClick={() => click('playerA')}>玩家 A{arrow('playerA')}</th>
+                <th className="plain">对局方</th>
                 <th onClick={() => click('mode')}>单挑{arrow('mode')}</th>
                 <th className="plain">比分</th>
                 <th onClick={() => click('rounds')} className="num">

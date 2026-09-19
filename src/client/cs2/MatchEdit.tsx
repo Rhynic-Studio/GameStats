@@ -50,7 +50,9 @@ export default function MatchEdit() {
     setRows(defaultRows(lists.modes.find((m) => m.id === mid), lists.items));
   };
 
-  if (!lists) return <div className="page">{err ? <p className="err">{err}</p> : <p className="muted">加载中…</p>}</div>;
+  if (!lists) {
+    return <div className="page">{err ? <p className="err">{err}</p> : <p className="muted">加载中…</p>}</div>;
+  }
 
   const parsed = rows.map((r) => ({ itemId: r.itemId, scoreA: Number(r.a || 0), scoreB: Number(r.b || 0) }));
   const totalA = parsed.reduce((s, r) => s + r.scoreA, 0);
@@ -77,12 +79,12 @@ export default function MatchEdit() {
           { label: '游戏', to: '/' },
           { label: 'CS2 单挑', to: '/cs2' },
           ...(id ? [{ label: '这一场', to: `/cs2/${id}` }] : []),
-          { label: id ? '改' : '新的一场' },
+          { label: id ? '修改' : '新的一场' },
         ]}
       />
 
       <Card
-        title={id ? '改这一场' : '新的一场'}
+        title={id ? '修改这一场' : '新的一场'}
         actions={
           <>
             <button onClick={() => nav(id ? `/cs2/${id}` : '/cs2')}>取消</button>
@@ -97,14 +99,14 @@ export default function MatchEdit() {
             日期
             <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} />
           </label>
-          <label className="field">
-            玩家 A
-            <input list="players" value={playerA} onChange={(e) => setPlayerA(e.target.value)} />
-          </label>
-          <label className="field">
-            玩家 B
-            <input list="players" value={playerB} onChange={(e) => setPlayerB(e.target.value)} />
-          </label>
+          <div className="field">
+            对局方
+            <div className="pair">
+              <input list="players" value={playerA} onChange={(e) => setPlayerA(e.target.value)} />
+              <span className="muted">vs</span>
+              <input list="players" value={playerB} onChange={(e) => setPlayerB(e.target.value)} />
+            </div>
+          </div>
           <datalist id="players">
             {lists.players.map((p) => (
               <option key={p.id} value={p.name} />
@@ -132,8 +134,8 @@ export default function MatchEdit() {
           <thead>
             <tr>
               <th className="plain">项目</th>
-              <th className="plain num">{playerA || 'A'} 得分</th>
-              <th className="plain num">{playerB || 'B'} 得分</th>
+              <th className="plain num">{playerA || '得分'}</th>
+              <th className="plain num">{playerB || '得分'}</th>
               <th className="plain num">局数</th>
               <th className="plain"></th>
             </tr>
@@ -195,9 +197,7 @@ export default function MatchEdit() {
               + 加一项
             </button>
           )}
-          <span className="muted small">
-            {totalRounds > 0 ? `总局数 ${totalRounds}` : ''}
-          </span>
+          <span className="muted small">{totalRounds > 0 ? `总局数 ${totalRounds}` : ''}</span>
         </div>
       </Card>
 

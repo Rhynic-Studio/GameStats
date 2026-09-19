@@ -263,3 +263,104 @@ label.field {
   font-size: 16px;
   font-weight: 600;
 }
+
+/* ---------- 顶部导航 ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.topbar .crumbs {
+  margin: 0;
+}
+
+.topbar nav {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.topbar nav a,
+.topbar nav span {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.topbar nav a {
+  color: var(--muted);
+}
+
+.topbar nav a:hover {
+  background: #e9ebee;
+  text-decoration: none;
+}
+
+.topbar nav span {
+  background: #fff;
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
+/* ---------- 统计双栏 ---------- */
+
+.cols {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.navlist {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.navlist button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.navlist button:hover {
+  background: #f2f4f6;
+}
+
+.navlist button.on {
+  background: #eaf0fd;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.navlist .group {
+  padding: 12px 10px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.navlist .sub button {
+  padding-left: 22px;
+}
+
+/* ---------- 一对输入 ---------- */
+
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

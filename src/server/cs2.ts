@@ -277,8 +277,8 @@ export function stats(playerId?: number, opponentId?: number): StatTable[] {
     },
     {
       key: 'solo-win',
-      group: 'solo三项高阶数据',
-      title: '项目优胜',
+      group: '高阶数据',
+      title: 'solo三项项目优胜',
       columns: [
         { key: '项目', label: '项目', kind: 'list' },
         { key: '优胜数', label: '优胜数', kind: 'number' },

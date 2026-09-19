@@ -41,7 +41,7 @@ export default function MatchView() {
           <>
             <span className="muted small">{win ? `${win} 胜` : '平'}</span>
             <Link to={`/cs2/${m.id}/edit`}>
-              <button className="primary">改</button>
+              <button className="primary">修改</button>
             </Link>
           </>
         }
