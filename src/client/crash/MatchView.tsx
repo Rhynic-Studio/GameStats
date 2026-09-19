@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
-import { RULES, WIN_KINDS, hasBuff, initiativeDecider, resultLabel, scoreBefore, sideOf } from '../../shared/crash.ts';
+import { RULES, hasBuff, initiativeDecider, resultLabel, scoreBefore, sideOf } from '../../shared/crash.ts';
 import type { CrashLists } from '../common/api.ts';
 import type { CrashMatchDetail } from '../../shared/types.ts';
 
@@ -30,7 +30,12 @@ export default function MatchView() {
   if (!m || !lists) return <div className="page muted">加载中…</div>;
 
   const ruleset = RULES[m.rule] ?? RULES.bp;
-  const roleName = (rid: number | null) => (rid === null ? '—' : (lists.roles.find((r) => r.id === rid)?.name ?? '?'));
+  const roleOf = (rid: number | null) => lists.roles.find((r) => r.id === rid);
+  const roleName = (rid: number | null) => (rid === null ? '—' : (roleOf(rid)?.name ?? '?'));
+  const roleColor = (rid: number | null) => {
+    const c = roleOf(rid)?.color;
+    return c ? `#${c}` : undefined;
+  };
   const name = (side: 0 | 1) => (side === 0 ? m.playerA.name : m.playerB.name);
 
   let banNo = 0;
@@ -81,7 +86,7 @@ export default function MatchView() {
           </div>
           <div className="chips">
             {m.pool.map((rid) => (
-              <span key={rid} className="tag">
+              <span key={rid} className="tag role-name" style={{ color: roleColor(rid) }}>
                 {roleName(rid)}
               </span>
             ))}
@@ -103,7 +108,9 @@ export default function MatchView() {
                     {name(sideOf(slot, m.firstSide))}
                     {slot.side === 'first' && <span className="muted small"> BP先手</span>}
                   </td>
-                  <td>{rid === undefined ? '—' : roleName(rid)}</td>
+                  <td className="role-name" style={{ color: roleColor(rid ?? null) }}>
+                    {rid === undefined ? '—' : roleName(rid)}
+                  </td>
                 </tr>
               );
             })}
@@ -137,9 +144,13 @@ export default function MatchView() {
                 <span>先攻方</span>
                 <div>{r.initiativeSide === null ? '—' : name(r.initiativeSide)}</div>
                 <span>{m.playerA.name} 出战</span>
-                <div>{roleName(r.roleA)}</div>
+                <div className="role-name" style={{ color: roleColor(r.roleA) }}>
+                  {roleName(r.roleA)}
+                </div>
                 <span>{m.playerB.name} 出战</span>
-                <div>{roleName(r.roleB)}</div>
+                <div className="role-name" style={{ color: roleColor(r.roleB) }}>
+                  {roleName(r.roleB)}
+                </div>
                 <span>战败补偿</span>
                 <div className="muted">{compensated.length === 0 ? '无' : compensated.join('、')}</div>
               </div>
@@ -151,7 +162,6 @@ export default function MatchView() {
       <p>
         <button onClick={() => nav('/crash')}>← 返回对局记录</button>
       </p>
-      <span className="muted small">{WIN_KINDS.join(' / ')}</span>
     </div>
   );
 }

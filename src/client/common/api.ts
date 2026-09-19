@@ -49,7 +49,7 @@ export const cs2 = {
 /* ---------------- crash ---------------- */
 
 export interface CrashLists {
-  roles: ListItem[];
+  roles: (ListItem & { color: string })[];
   players: Player[];
   rules: { key: string; label: string; poolSize: number }[];
   roundResults: { key: string; label: string }[];

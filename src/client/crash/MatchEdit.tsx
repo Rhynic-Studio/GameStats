@@ -68,7 +68,12 @@ export default function MatchEdit() {
   const name = (s: 0 | 1) => (s === 0 ? nameA : nameB);
 
   const ruleset = RULES[rule] ?? RULES.bp;
-  const roleName = (rid: number | null) => (rid === null ? '—' : (lists?.roles.find((r) => r.id === rid)?.name ?? '?'));
+  const roleOf = (rid: number | null) => lists?.roles.find((r) => r.id === rid);
+  const roleName = (rid: number | null) => (rid === null ? '—' : (roleOf(rid)?.name ?? '?'));
+  const roleColor = (rid: number | null) => {
+    const c = roleOf(rid)?.color;
+    return c ? `#${c}` : undefined;
+  };
 
   const pickRule = (key: string) => {
     setRule(key);
@@ -198,7 +203,8 @@ export default function MatchEdit() {
           {lists.roles.map((r) => (
             <button
               key={r.id}
-              className={`chip${pool.includes(r.id) ? ' on' : ''}`}
+              className={`chip role${pool.includes(r.id) ? ' on' : ''}`}
+              style={{ color: `#${r.color}` }}
               onClick={() => {
                 if (usedRoles.has(r.id)) return;
                 setPool(pool.includes(r.id) ? pool.filter((x) => x !== r.id) : [...pool, r.id]);
@@ -226,7 +232,9 @@ export default function MatchEdit() {
                     {name(sideOf(slot, firstSide))}
                     {slot.side === 'first' && <span className="muted small"> BP先手</span>}
                   </td>
-                  <td>{rid === undefined ? (i === current ? '← 当前' : '—') : roleName(rid)}</td>
+                  <td className="role-name" style={{ color: roleColor(rid ?? null) }}>
+                    {rid === undefined ? (i === current ? '← 当前' : '—') : roleName(rid)}
+                  </td>
                   <td style={{ width: 76 }}>
                     {rid !== undefined && (
                       <button
@@ -248,7 +256,13 @@ export default function MatchEdit() {
             <span className="muted small">{pool.length === 0 ? '先从上面选角色池' : '都选完了'}</span>
           ) : (
             available.map((rid) => (
-              <button key={rid} className="chip" disabled={current < 0} onClick={() => setDraft({ ...draft, [current]: rid })}>
+              <button
+                key={rid}
+                className="chip role"
+                style={{ color: roleColor(rid) }}
+                disabled={current < 0}
+                onClick={() => setDraft({ ...draft, [current]: rid })}
+              >
                 {roleName(rid)}
               </button>
             ))

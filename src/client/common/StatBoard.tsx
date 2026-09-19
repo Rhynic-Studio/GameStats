@@ -63,7 +63,7 @@ function GridView({ table }: { table: GridTable }) {
 
 /* ---------------- 矩阵 ---------------- */
 
-function MatrixView({ table }: { table: MatrixTable }) {
+function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: number) => string | undefined }) {
   return (
     <Card title={table.title} flush>
       <div className="scroll-x">
@@ -72,7 +72,7 @@ function MatrixView({ table }: { table: MatrixTable }) {
             <tr>
               <th className="plain sticky-col">{table.rowHeader}</th>
               {table.cols.map((c) => (
-                <th key={c.id} className="num">
+                <th key={c.id} className="num" style={{ color: colorOf?.(c.id) }}>
                   {c.name}
                 </th>
               ))}
@@ -81,7 +81,9 @@ function MatrixView({ table }: { table: MatrixTable }) {
           <tbody>
             {table.rows.map((r) => (
               <tr key={r.id}>
-                <td className="sticky-col">{r.name}</td>
+                <td className="sticky-col" style={{ color: colorOf?.(r.id) }}>
+                  {r.name}
+                </td>
                 {r.cells.map((v, i) => (
                   <td key={i} className="num">
                     {v === null ? <span className="muted">—</span> : `${(v * 100).toFixed(0)}%`}
@@ -96,8 +98,8 @@ function MatrixView({ table }: { table: MatrixTable }) {
   );
 }
 
-export function TableView({ table }: { table: StatTable }) {
-  return table.kind === 'matrix' ? <MatrixView table={table} /> : <GridView table={table} />;
+export function TableView({ table, colorOf }: { table: StatTable; colorOf?: (id: number) => string | undefined }) {
+  return table.kind === 'matrix' ? <MatrixView table={table} colorOf={colorOf} /> : <GridView table={table} />;
 }
 
 /* ---------------- 双栏版面 ---------------- */
@@ -106,10 +108,12 @@ export function StatBoard({
   tables,
   children,
   empty,
+  colorOf,
 }: {
   tables: StatTable[] | null;
   children?: ReactNode;
   empty?: ReactNode;
+  colorOf?: (id: number) => string | undefined;
 }) {
   const [params, setParams] = useSearchParams();
 
@@ -158,7 +162,7 @@ export function StatBoard({
           <div style={{ marginTop: 16 }}>
             {shown.map((t, i) => (
               <div key={i} style={{ marginTop: i === 0 ? 0 : 16 }}>
-                <TableView table={t} />
+                <TableView table={t} colorOf={colorOf} />
               </div>
             ))}
           </div>

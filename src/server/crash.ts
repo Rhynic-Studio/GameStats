@@ -25,7 +25,7 @@ const num = (v: unknown) => Number(v);
 export function lists() {
   const d = db();
   return {
-    roles: d.prepare(`SELECT id, name FROM crash_roles ORDER BY sort, id`).all() as Row[],
+    roles: d.prepare(`SELECT id, name, color FROM crash_roles ORDER BY sort, id`).all() as Row[],
     players: d.prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[],
     rules: Object.values(RULES).map((r) => ({ key: r.key, label: r.label, poolSize: r.poolSize })),
     roundResults: ROUND_RESULTS.map((r) => ({ key: r.key })),

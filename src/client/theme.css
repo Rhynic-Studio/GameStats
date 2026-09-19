@@ -526,3 +526,17 @@ table td:last-child button {
   padding-top: 10px;
   border-top: 1px solid var(--line);
 }
+
+/* 角色色：稍微透明，白灰底上不刺眼 */
+.chip.role {
+  background: #fff;
+}
+
+.chip.role.on {
+  background: color-mix(in srgb, currentColor 12%, #fff);
+  border-color: color-mix(in srgb, currentColor 45%, #fff);
+}
+
+.role-name {
+  font-weight: 500;
+}

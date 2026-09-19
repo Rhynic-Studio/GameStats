@@ -7,6 +7,7 @@ import type { Player, StatTable } from '../../shared/types.ts';
 
 export default function Stats() {
   const [players, setPlayers] = useState<Player[] | null>(null);
+  const [colors, setColors] = useState<Map<number, string>>(new Map());
   const [params, setParams] = useSearchParams();
   const [tables, setTables] = useState<StatTable[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -20,7 +21,13 @@ export default function Stats() {
   };
 
   useEffect(() => {
-    crash.lists().then((l) => setPlayers(l.players)).catch((e) => setErr(String(e.message ?? e)));
+    crash
+      .lists()
+      .then((l) => {
+        setPlayers(l.players);
+        setColors(new Map(l.roles.map((r) => [r.id, `#${r.color}`])));
+      })
+      .catch((e) => setErr(String(e.message ?? e)));
   }, []);
 
   useEffect(() => {
@@ -31,7 +38,7 @@ export default function Stats() {
     <div className="page">
       <TopBar game="crash" name="Crash" current="stats" />
       {err && <p className="err">{err}</p>}
-      <StatBoard tables={tables}>
+      <StatBoard tables={tables} colorOf={(id) => colors.get(id)}>
         <Card title="筛选">
           <div className="fields">
             <label className="field">

@@ -38,9 +38,10 @@ CREATE INDEX IF NOT EXISTS idx_cs2_entries_match ON cs2_entries(match_id);
 
 const CRASH_SCHEMA = `
 CREATE TABLE IF NOT EXISTS crash_roles (
-  id   INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  sort INTEGER NOT NULL DEFAULT 0
+  id    INTEGER PRIMARY KEY AUTOINCREMENT,
+  name  TEXT NOT NULL UNIQUE,
+  color TEXT NOT NULL DEFAULT '#333333',
+  sort  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS crash_matches (
@@ -94,9 +95,21 @@ CREATE TABLE IF NOT EXISTS players (
 
 const CS2_ITEMS = ['手枪', '长枪', '狙击'];
 const CS2_MODES = ['手枪单挑', '长枪单挑', '狙击单挑', 'solo三项'];
-const CRASH_ROLES = [
-  '艾娅', '拔刀', '冰女', '妮妮', '妮娜', '阿兰', '妖姬',
-  '娜吉', '芙芙', '火女', '德鲁伊', '骇客', '怪盗', '商旅',
+const CRASH_ROLES: { name: string; color: string }[] = [
+  { name: '艾娅', color: '2b3a55' },
+  { name: '卫冕冠军 妮妮', color: 'cf7b8e' },
+  { name: '妮娜·安赫玛托娃', color: '4a7fa5' },
+  { name: '苍玉露世', color: '3f5fa8' },
+  { name: '玄华妖姬', color: '7a5aa8' },
+  { name: '伊诗·努·阿兰', color: '3f7a4a' },
+  { name: '最后的大德鲁伊', color: '5a5aa8' },
+  { name: '商旅香诺尔', color: '2f5d4a' },
+  { name: '怪盗x黑猫', color: '9e3b3b' },
+  { name: '菲尼伽涅维娜', color: '2f6f8f' },
+  { name: '偶像N.A.G.I', color: 'a86b93' },
+  { name: '菲尼斯涅维娜', color: '7a828c' },
+  { name: '骇客娜吉尼', color: '8a6f4a' },
+  { name: '芙芙', color: '5f7a8a' },
 ];
 
 let _db: DatabaseSync | null = null;
@@ -114,8 +127,8 @@ export function db(): DatabaseSync {
   CS2_ITEMS.forEach((n, i) => item.run(n, i + 1));
   const mode = d.prepare(`INSERT OR IGNORE INTO cs2_modes (name, sort) VALUES (?, ?)`);
   CS2_MODES.forEach((n, i) => mode.run(n, i + 1));
-  const role = d.prepare(`INSERT OR IGNORE INTO crash_roles (name, sort) VALUES (?, ?)`);
-  CRASH_ROLES.forEach((n, i) => role.run(n, i + 1));
+  const role = d.prepare(`INSERT OR IGNORE INTO crash_roles (name, color, sort) VALUES (?, ?, ?)`);
+  CRASH_ROLES.forEach((r, i) => role.run(r.name, r.color, i + 1));
 
   _db = d;
   return d;
