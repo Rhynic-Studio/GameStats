@@ -304,6 +304,8 @@ interface PoolFact {
   picked: boolean;
   firstBan: boolean;
   firstPick: boolean;
+  /** 这个 ban/pick 是哪位玩家出手的；没人动过就是 null */
+  playerId: number | null;
 }
 
 function buildFacts(playerId?: number) {
@@ -324,10 +326,14 @@ function buildFacts(playerId?: number) {
       let picked = false;
       let firstBan = false;
       let firstPick = false;
+      let actedBy: number | null = null;
       for (const [seq, rid] of m.draft) {
         if (rid !== roleId) continue;
         const slot = rule?.slots[seq];
         if (!slot) continue;
+        // slot 上的 side 是「先手/后手」，换成具体是哪位玩家出手的
+        const side = (slot.side === 'first' ? m.firstSide : 1 - m.firstSide) as 0 | 1;
+        actedBy = side === 0 ? m.playerA : m.playerB;
         if (slot.kind === 'ban') {
           banned = true;
           if (seq === firstBanSeq) firstBan = true;
@@ -345,6 +351,7 @@ function buildFacts(playerId?: number) {
         picked,
         firstBan,
         firstPick,
+        playerId: actedBy,
       });
     }
 
@@ -356,6 +363,8 @@ function buildFacts(playerId?: number) {
       if (w === null) continue;
       const buff = d.buffs.get(r.idx) ?? [false, false];
       for (const side of [0, 1] as const) {
+        // 选了某个玩家，就只留他自己那一侧：否则对手打过的角色也会算进他的统计
+        if (playerId !== undefined && (side === 0 ? m.playerA : m.playerB) !== playerId) continue;
         const opp = (side === 0 ? 1 : 0) as 0 | 1;
         const myBuff = buff[side];
         const oppBuff = buff[opp];
@@ -459,13 +468,17 @@ export function stats(playerId?: number): StatTable[] {
       roles.map((role) => {
         // 初见模式没有 ban/pick，不计入 BP 率
         const rows = poolFacts.filter((f) => f.roleId === role.id && f.rule !== 'first');
+        // 分母是角色进过候选池的场次；分子只算「选中玩家出手的」，
+        // 没选玩家就是所有人合计
+        const n = (hit: (f: PoolFact) => boolean) =>
+          rows.filter((f) => hit(f) && (playerId === undefined || f.playerId === playerId)).length;
         return {
           角色: roleCell(role),
-          bp率: rate(rows.filter((f) => f.banned || f.picked).length, rows.length),
-          ban率: rate(rows.filter((f) => f.banned).length, rows.length),
-          pick率: rate(rows.filter((f) => f.picked).length, rows.length),
-          首ban率: rate(rows.filter((f) => f.firstBan).length, rows.length),
-          首pick率: rate(rows.filter((f) => f.firstPick).length, rows.length),
+          bp率: rate(n((f) => f.banned || f.picked), rows.length),
+          ban率: rate(n((f) => f.banned), rows.length),
+          pick率: rate(n((f) => f.picked), rows.length),
+          首ban率: rate(n((f) => f.firstBan), rows.length),
+          首pick率: rate(n((f) => f.firstPick), rows.length),
           出现: rows.length,
         };
       }),
@@ -529,7 +542,9 @@ export function stats(playerId?: number): StatTable[] {
         { key: '胜率', label: '胜率', kind: 'percent' },
         { key: '轮数', label: '轮数', kind: 'number' },
       ],
-      playersWithMatches().map((p) => {
+      playersWithMatches()
+        .filter((p) => playerId === undefined || p.id === playerId)
+        .map((p) => {
         const rows = roundFacts.filter((f) => f.myPlayer === p.id && f.initiative);
         return {
           玩家: { id: p.id, name: p.name } as Cell,
