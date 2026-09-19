@@ -127,7 +127,7 @@ export default function MatchView() {
       <Card title={`逐轮（${m.score[0]} : ${m.score[1]}）`}>
         {m.rounds.length === 0 && <span className="muted small">还没录</span>}
         {m.rounds.map((r) => {
-          const decider = initiativeDecider(m.rounds, r.idx, m.firstSide);
+          const decider = initiativeDecider(m.rounds, r.idx, m.firstSide, m.rule);
           const before = scoreBefore(m.rounds, r.idx);
           const w = winnerOf(r.result);
           const running: [number, number] = [0, 0];
@@ -151,7 +151,7 @@ export default function MatchView() {
                 <span>决定先攻</span>
                 <div>
                   {decider === null ? '—' : name(decider)}
-                  {r.idx === 1 ? <span className="muted small">（BP 先手方）</span> : <span className="muted small">（上一轮败方）</span>}
+                  {r.idx === 1 ? <span className="muted small">（{m.rule === 'bp' ? 'BP 后手方' : 'BP 先手方'}）</span> : <span className="muted small">（上一轮败方）</span>}
                 </div>
                 <span>他的选择</span>
                 <div>{r.initiativeSide === null ? '未定' : r.initiativeSide === decider ? '先攻' : '后攻'}</div>

@@ -84,13 +84,18 @@ export function hasBuff(rounds: { idx: number; result: string }[], idx: number, 
 export const buffState = (mine: boolean, theirs: boolean): '都无' | '我优' | '我劣' | '都有' =>
   mine && theirs ? '都有' : mine ? '我优' : theirs ? '我劣' : '都无';
 
-/** 这一轮由谁决定先攻：第 1 轮是 BP 先手方，之后是上一轮的败方 */
+/**
+ * 这一轮由谁决定先攻。
+ * 第 1 轮：bp 模式由 BP 后手方决定，初见模式由 BP 先手方决定。
+ * 之后：上一轮的败方。
+ */
 export function initiativeDecider(
   rounds: { idx: number; result: string }[],
   idx: number,
   firstSide: 0 | 1,
+  rule: string,
 ): 0 | 1 | null {
-  if (idx === 1) return firstSide;
+  if (idx === 1) return rule === 'bp' ? ((1 - firstSide) as 0 | 1) : firstSide;
   const prev = rounds.find((r) => r.idx === idx - 1);
   if (!prev) return null;
   const w = winnerOf(prev.result);

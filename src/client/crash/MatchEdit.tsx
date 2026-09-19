@@ -270,7 +270,7 @@ export default function MatchEdit() {
 
       <Card title={`逐轮（${score[0]} : ${score[1]}）`}>
         {all.slice(0, visible).map((r) => {
-          const decider = initiativeDecider(all, r.idx, firstSide);
+          const decider = initiativeDecider(all, r.idx, firstSide, rule);
           const w = winnerOf(r.result);
           const running: [number, number] = [0, 0];
           for (const x of all) {
@@ -296,7 +296,7 @@ export default function MatchEdit() {
                 <span>决定先攻</span>
                 <div>
                   {decider === null ? '—' : `${name(decider)}`}
-                  {r.idx === 1 && <span className="muted small">（BP 先手方）</span>}
+                  {r.idx === 1 && <span className="muted small">（{rule === 'bp' ? 'BP 后手方' : 'BP 先手方'}）</span>}
                   {r.idx > 1 && <span className="muted small">（上一轮败方）</span>}
                 </div>
 

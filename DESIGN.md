@@ -1,4 +1,4 @@
-# battle-stats
+# game-stats
 
 内网对战数据统计。一个站点、一个数据库，用路径区分游戏：`/cs2`、`/crash`。
 
