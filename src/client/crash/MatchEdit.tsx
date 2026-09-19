@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
@@ -78,14 +78,30 @@ export default function MatchEdit() {
     setDraft(Object.fromEntries(Object.entries(draft).filter(([seq]) => Number(seq) < (RULES[key] ?? RULES.bp).slots.length)));
   };
 
-  const usedRoles = useMemo(() => new Set(Object.values(draft)), [draft]);
+  const usedRoles = new Set(Object.values(draft));
+  const bannedRoles = new Set(
+    Object.entries(draft)
+      .filter(([seq]) => ruleset.slots[Number(seq)]?.kind === 'ban')
+      .map(([, rid]) => rid),
+  );
   const current = ruleset.slots.findIndex((_, i) => draft[i] === undefined);
-  const available = pool.filter((rid) => !usedRoles.has(rid));
+  const slot = ruleset.slots[current];
+  // 一般从池里挑还没被用过的；v2 的 ban 只能挑对方已经选走的
+  const available =
+    slot?.kind === 'ban' && slot.from === 'opponent'
+      ? Object.entries(draft)
+          .filter(([seq]) => {
+            const s = ruleset.slots[Number(seq)];
+            return s?.kind === 'pick' && s.side !== slot.side;
+          })
+          .map(([, rid]) => rid)
+          .filter((rid) => !bannedRoles.has(rid))
+      : pool.filter((rid) => !usedRoles.has(rid));
 
   const sidePicks: [number[], number[]] = [[], []];
   for (const [seq, rid] of Object.entries(draft)) {
-    const slot = ruleset.slots[Number(seq)];
-    if (slot?.kind === 'pick') sidePicks[sideOf(slot, firstSide)].push(rid);
+    const s = ruleset.slots[Number(seq)];
+    if (s?.kind === 'pick' && !bannedRoles.has(rid)) sidePicks[sideOf(s, firstSide)].push(rid);
   }
 
   const all = Array.from({ length: MAX_ROUNDS }, (_, i) => rounds.find((r) => r.idx === i + 1) ?? emptyRound(i + 1));

@@ -1,6 +1,6 @@
 import { db, playersWithMatches } from './db.ts';
 import { PENDING } from '../shared/crash.ts';
-import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, WIN_KINDS, isPlayed, winnerOf } from '../shared/crash.ts';
+import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, WIN_KINDS, isPlayed, sideOf, winnerOf } from '../shared/crash.ts';
 import type { CrashRuleset } from '../shared/types.ts';
 import type {
   CrashMatchDetail,
@@ -190,7 +190,7 @@ interface MatchBody {
   rounds?: CrashRound[];
 }
 
-function writeChildren(id: number, body: MatchBody, rule: CrashRuleset) {
+function writeChildren(id: number, body: MatchBody, rule: CrashRuleset, firstSide: 0 | 1) {
   const d = db();
   if (body.pool) {
     d.prepare(`DELETE FROM crash_pool WHERE match_id = ?`).run(id);
@@ -200,11 +200,28 @@ function writeChildren(id: number, body: MatchBody, rule: CrashRuleset) {
   if (body.draft) {
     d.prepare(`DELETE FROM crash_draft WHERE match_id = ?`).run(id);
     const ins = d.prepare(`INSERT INTO crash_draft (match_id, seq, role_id) VALUES (?, ?, ?)`);
-    const seen = new Set<number>();
-    for (const a of body.draft) {
-      if (!rule.slots[a.seq]) throw new Error(`槽位 ${a.seq} 不属于 ${rule.label}`);
-      if (seen.has(a.roleId)) throw new Error('同一个角色不能重复 ban / pick');
-      seen.add(a.roleId);
+    const picked = new Set<number>();
+    const banned = new Set<number>();
+    const pickedBySide: [Set<number>, Set<number>] = [new Set(), new Set()];
+    // 按槽位顺序走：v2 的 ban 要能看到前面已经选走的角色
+    for (const a of [...body.draft].sort((x, y) => x.seq - y.seq)) {
+      const slot = rule.slots[a.seq];
+      if (!slot) throw new Error(`槽位 ${a.seq} 不属于 ${rule.label}`);
+      const side = sideOf(slot, firstSide);
+
+      if (slot.kind === 'pick') {
+        if (picked.has(a.roleId) || banned.has(a.roleId)) throw new Error('同一个角色不能重复 ban / pick');
+        picked.add(a.roleId);
+        pickedBySide[side].add(a.roleId);
+      } else if (slot.from === 'opponent') {
+        // 这种 ban 针对的就是对方选走的角色，所以它必然已经在 pick 里
+        if (!pickedBySide[side === 0 ? 1 : 0].has(a.roleId)) throw new Error('只能 ban 对方选走的角色');
+        if (banned.has(a.roleId)) throw new Error('这个角色已经被 ban 过了');
+        banned.add(a.roleId);
+      } else {
+        if (picked.has(a.roleId) || banned.has(a.roleId)) throw new Error('同一个角色不能重复 ban / pick');
+        banned.add(a.roleId);
+      }
       ins.run(id, a.seq, a.roleId);
     }
   }
@@ -227,6 +244,7 @@ export function createMatch(body: MatchBody): number {
   const a = ensurePlayer(body.playerA ?? '');
   const b = ensurePlayer(body.playerB ?? '');
   if (a === b) throw new Error('两边不能是同一个人');
+  const firstSide: 0 | 1 = body.firstSide === 1 ? 1 : 0;
   const id = num(
     db()
       .prepare(
@@ -238,12 +256,12 @@ export function createMatch(body: MatchBody): number {
         a,
         b,
         rule.key,
-        body.firstSide === 1 ? 1 : 0,
+        firstSide,
         body.note ?? '',
         body.inProgress ? 1 : 0,
       ).lastInsertRowid,
   );
-  writeChildren(id, body, rule);
+  writeChildren(id, body, rule, firstSide);
   return id;
 }
 
@@ -255,6 +273,8 @@ export function updateMatch(id: number, body: MatchBody): void {
   const a = body.playerA === undefined ? num(cur.player_a) : ensurePlayer(body.playerA);
   const b = body.playerB === undefined ? num(cur.player_b) : ensurePlayer(body.playerB);
   if (a === b) throw new Error('两边不能是同一个人');
+  const firstSide: 0 | 1 =
+    body.firstSide === undefined ? (num(cur.first_side) as 0 | 1) : body.firstSide === 1 ? 1 : 0;
   d.prepare(
     `UPDATE crash_matches SET played_at = ?, player_a = ?, player_b = ?, rule = ?, first_side = ?, note = ?, in_progress = ?
      WHERE id = ?`,
@@ -263,12 +283,12 @@ export function updateMatch(id: number, body: MatchBody): void {
     a,
     b,
     rule.key,
-    body.firstSide === undefined ? num(cur.first_side) : body.firstSide === 1 ? 1 : 0,
+    firstSide,
     body.note ?? String(cur.note ?? ''),
     body.inProgress === undefined ? num(cur.in_progress) : body.inProgress ? 1 : 0,
     id,
   );
-  writeChildren(id, body, rule);
+  writeChildren(id, body, rule, firstSide);
 }
 
 export function deleteMatch(id: number): void {
@@ -304,8 +324,9 @@ interface PoolFact {
   picked: boolean;
   firstBan: boolean;
   firstPick: boolean;
-  /** 这个 ban/pick 是哪位玩家出手的；没人动过就是 null */
-  playerId: number | null;
+  /** 谁选的 / 谁 ban 的。没人动过就是 null —— 分开记，因为 v2 里可能是两个人 */
+  pickBy: number | null;
+  banBy: number | null;
 }
 
 function buildFacts(playerId?: number) {
@@ -327,6 +348,8 @@ function buildFacts(playerId?: number) {
       let firstBan = false;
       let firstPick = false;
       let actedBy: number | null = null;
+      let pickBy: number | null = null;
+      let banBy: number | null = null;
       for (const [seq, rid] of m.draft) {
         if (rid !== roleId) continue;
         const slot = rule?.slots[seq];
@@ -336,9 +359,11 @@ function buildFacts(playerId?: number) {
         actedBy = side === 0 ? m.playerA : m.playerB;
         if (slot.kind === 'ban') {
           banned = true;
+          banBy = actedBy;
           if (seq === firstBanSeq) firstBan = true;
         } else {
           picked = true;
+          pickBy = actedBy;
           if (seq === firstPickSeq) firstPick = true;
         }
       }
@@ -351,7 +376,8 @@ function buildFacts(playerId?: number) {
         picked,
         firstBan,
         firstPick,
-        playerId: actedBy,
+        pickBy,
+        banBy,
       });
     }
 
@@ -469,16 +495,18 @@ export function stats(playerId?: number): StatTable[] {
         // 初见模式没有 ban/pick，不计入 BP 率
         const rows = poolFacts.filter((f) => f.roleId === role.id && f.rule !== 'first');
         // 分母是角色进过候选池的场次；分子只算「选中玩家出手的」，
-        // 没选玩家就是所有人合计
-        const n = (hit: (f: PoolFact) => boolean) =>
-          rows.filter((f) => hit(f) && (playerId === undefined || f.playerId === playerId)).length;
+        // 没选玩家就是所有人合计。v2 里同一角色可能是一个人选的、另一个人 ban 的
+        const mine = (who: number | null) => playerId === undefined || who === playerId;
         return {
           角色: roleCell(role),
-          bp率: rate(n((f) => f.banned || f.picked), rows.length),
-          ban率: rate(n((f) => f.banned), rows.length),
-          pick率: rate(n((f) => f.picked), rows.length),
-          首ban率: rate(n((f) => f.firstBan), rows.length),
-          首pick率: rate(n((f) => f.firstPick), rows.length),
+          bp率: rate(
+            rows.filter((f) => (f.picked && mine(f.pickBy)) || (f.banned && mine(f.banBy))).length,
+            rows.length,
+          ),
+          ban率: rate(rows.filter((f) => f.banned && mine(f.banBy)).length, rows.length),
+          pick率: rate(rows.filter((f) => f.picked && mine(f.pickBy)).length, rows.length),
+          首ban率: rate(rows.filter((f) => f.firstBan && mine(f.banBy)).length, rows.length),
+          首pick率: rate(rows.filter((f) => f.firstPick && mine(f.pickBy)).length, rows.length),
           出现: rows.length,
         };
       }),

@@ -4,8 +4,10 @@ const F = 'first' as const;
 const S = 'second' as const;
 const P = (side: 'first' | 'second') => ({ kind: 'pick' as const, side });
 const B = (side: 'first' | 'second') => ({ kind: 'ban' as const, side });
+/** ban 掉对方已经选走的角色 */
+const BO = (side: 'first' | 'second') => ({ kind: 'ban' as const, side, from: 'opponent' as const });
 
-/** 两套规则。slots 就是 ban / pick 的执行顺序 */
+/** 三套规则。slots 就是 ban / pick 的执行顺序 */
 export const RULES: Record<string, CrashRuleset> = {
   first: {
     key: 'first',
@@ -15,9 +17,16 @@ export const RULES: Record<string, CrashRuleset> = {
   },
   bp: {
     key: 'bp',
-    label: 'bp模式',
+    label: 'bp规则v1',
     poolSize: 10,
     slots: [B(F), B(S), P(S), P(F), P(F), P(S), P(S), P(F)],
+  },
+  bp2: {
+    key: 'bp2',
+    label: 'bp规则v2',
+    poolSize: 11,
+    // 先手 1 / 后手 2 / 先手 2 / 后手 2 / 先手 1，然后各自 ban 掉对方选走的一个
+    slots: [P(F), P(S), P(S), P(F), P(F), P(S), P(S), P(F), BO(F), BO(S)],
   },
 };
 
@@ -85,8 +94,8 @@ export const buffState = (mine: boolean, theirs: boolean): '都无' | '我优' |
   mine && theirs ? '都有' : mine ? '我优' : theirs ? '我劣' : '都无';
 
 /**
- * 这一轮由谁决定先攻。
- * 第 1 轮：bp 模式由 BP 后手方决定，初见模式由 BP 先手方决定。
+ * 这一轮由谁决定先攻（决定的人自己选要不要先攻）。
+ * 第 1 轮：bp 规则 v1 由后手方决定，其余规则由先手方决定。
  * 之后：上一轮的败方。
  */
 export function initiativeDecider(

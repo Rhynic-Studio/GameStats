@@ -78,6 +78,8 @@ export interface CrashRole extends ListItem {}
 export interface DraftSlotDef {
   kind: 'ban' | 'pick';
   side: 'first' | 'second';
+  /** ban 针对谁：默认从池里挑还没被选过的；opponent = 只能 ban 对方已经选走的角色 */
+  from?: 'pool' | 'opponent';
 }
 
 export interface CrashRuleset {
