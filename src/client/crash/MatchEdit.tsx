@@ -9,10 +9,8 @@ import {
   ROUND_RESULTS,
   WIN_BY,
   WIN_KINDS,
-  hasBuff,
   initiativeDecider,
   resultLabel,
-  scoreBefore,
   sideOf,
   winnerOf,
 } from '../../shared/crash.ts';
@@ -273,10 +271,15 @@ export default function MatchEdit() {
       <Card title={`逐轮（${score[0]} : ${score[1]}）`}>
         {all.slice(0, visible).map((r) => {
           const decider = initiativeDecider(all, r.idx, firstSide);
-          const before = scoreBefore(all, r.idx);
-          const buffA = hasBuff(all, r.idx, 0);
-          const buffB = hasBuff(all, r.idx, 1);
           const w = winnerOf(r.result);
+          const running: [number, number] = [0, 0];
+          for (const x of all) {
+            if (x.idx > r.idx) break;
+            const ww = winnerOf(x.result);
+            if (ww !== null) running[ww]++;
+          }
+          const decidedHere = w !== null && running[w] >= WIN_BY;
+          const loser = w === null || decidedHere ? null : (w === 0 ? nameB : nameA);
           return (
             <div key={r.idx} className="round-block">
               <div className="round-head">
@@ -369,12 +372,12 @@ export default function MatchEdit() {
                   </select>
                 </div>
 
-                <span>战败补偿</span>
-                <div className="muted">
-                  {before[0] === 0 && before[1] === 0
-                    ? '无'
-                    : [buffA ? nameA : null, buffB ? nameB : null].filter(Boolean).join('、')}
-                </div>
+                {r.idx < MAX_ROUNDS && (
+                  <>
+                    <span>战败补偿</span>
+                    <div className="muted">{loser === null ? '无' : loser + ' 获得'}</div>
+                  </>
+                )}
               </div>
             </div>
           );

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
-import { RULES, hasBuff, initiativeDecider, resultLabel, scoreBefore, sideOf } from '../../shared/crash.ts';
+import { MAX_ROUNDS, RULES, WIN_BY, initiativeDecider, resultLabel, scoreBefore, sideOf, winnerOf } from '../../shared/crash.ts';
 import type { CrashLists } from '../common/api.ts';
 import type { CrashMatchDetail } from '../../shared/types.ts';
 
@@ -133,7 +133,15 @@ export default function MatchView() {
         {m.rounds.map((r) => {
           const decider = initiativeDecider(m.rounds, r.idx, m.firstSide);
           const before = scoreBefore(m.rounds, r.idx);
-          const compensated = [hasBuff(m.rounds, r.idx, 0) ? m.playerA.name : null, hasBuff(m.rounds, r.idx, 1) ? m.playerB.name : null].filter(Boolean);
+          const w = winnerOf(r.result);
+          const running: [number, number] = [0, 0];
+          for (const x of m.rounds) {
+            if (x.idx > r.idx) break;
+            const ww = winnerOf(x.result);
+            if (ww !== null) running[ww]++;
+          }
+          const decidedHere = w !== null && running[w] >= WIN_BY;
+          const loser = w === null || decidedHere ? null : (w === 0 ? m.playerB.name : m.playerA.name);
           return (
             <div key={r.idx} className="round-block">
               <div className="round-head">
@@ -161,8 +169,12 @@ export default function MatchView() {
                 <div className="role-name" style={{ color: roleColor(r.roleB) }}>
                   {roleName(r.roleB)}
                 </div>
-                <span>战败补偿</span>
-                <div className="muted">{compensated.length === 0 ? '无' : compensated.join('、')}</div>
+                {r.idx < MAX_ROUNDS && (
+                  <>
+                    <span>战败补偿</span>
+                    <div className="muted">{loser === null ? '无' : loser + ' 获得'}</div>
+                  </>
+                )}
               </div>
             </div>
           );
