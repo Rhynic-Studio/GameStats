@@ -40,7 +40,8 @@ const CRASH_SCHEMA = `
 CREATE TABLE IF NOT EXISTS crash_roles (
   id    INTEGER PRIMARY KEY AUTOINCREMENT,
   name  TEXT NOT NULL UNIQUE,
-  color TEXT NOT NULL DEFAULT '#333333',
+  short TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT '333333',
   sort  INTEGER NOT NULL DEFAULT 0
 );
 
@@ -95,21 +96,21 @@ CREATE TABLE IF NOT EXISTS players (
 
 const CS2_ITEMS = ['手枪', '长枪', '狙击'];
 const CS2_MODES = ['手枪单挑', '长枪单挑', '狙击单挑', 'solo三项'];
-const CRASH_ROLES: { name: string; color: string }[] = [
-  { name: '艾娅', color: '2b3a55' },
-  { name: '卫冕冠军 妮妮', color: 'c9758c' },
-  { name: '妮娜·安赫玛托娃', color: '9c3f63' },
-  { name: '苍玉露世', color: '4a7fa5' },
-  { name: '玄华妖姬', color: '7a5aa8' },
-  { name: '伊诗·努·阿兰', color: '4a7c3f' },
-  { name: '最后的大德鲁伊', color: '5a5aa8' },
-  { name: '商旅香诺尔', color: '2f5d4a' },
-  { name: '怪盗x黑猫', color: 'b8860b' },
-  { name: '菲尼伽涅维娜', color: '9e3b3b' },
-  { name: '偶像N.A.G.I', color: 'a86b93' },
-  { name: '菲尼斯涅维娜', color: '2f6f8f' },
-  { name: '骇客娜吉尼', color: '1f4a34' },
-  { name: '芙芙', color: '7a828c' },
+const CRASH_ROLES: { name: string; short: string; color: string }[] = [
+  { name: '艾娅', short: '艾娅', color: '2b3a55' },
+  { name: '卫冕冠军 妮妮', short: '妮妮', color: 'c9758c' },
+  { name: '妮娜·安赫玛托娃', short: '妮娜', color: '9c3f63' },
+  { name: '苍玉露世', short: '露世', color: '4a7fa5' },
+  { name: '玄华妖姬', short: '妖姬', color: '7a5aa8' },
+  { name: '伊诗·努·阿兰', short: '阿兰', color: '4a7c3f' },
+  { name: '最后的大德鲁伊', short: '德鲁伊', color: '5a5aa8' },
+  { name: '商旅香诺尔', short: '商旅', color: '2f5d4a' },
+  { name: '怪盗x黑猫', short: '怪盗', color: 'b8860b' },
+  { name: '菲尼伽涅维娜', short: '菲尼伽', color: '9e3b3b' },
+  { name: '偶像N.A.G.I', short: 'N.A.G.I', color: 'a86b93' },
+  { name: '菲尼斯涅维娜', short: '菲尼斯', color: '2f6f8f' },
+  { name: '骇客娜吉尼', short: '骇客', color: '1f4a34' },
+  { name: '芙芙', short: '芙芙', color: '7a828c' },
 ];
 
 let _db: DatabaseSync | null = null;
@@ -127,8 +128,8 @@ export function db(): DatabaseSync {
   CS2_ITEMS.forEach((n, i) => item.run(n, i + 1));
   const mode = d.prepare(`INSERT OR IGNORE INTO cs2_modes (name, sort) VALUES (?, ?)`);
   CS2_MODES.forEach((n, i) => mode.run(n, i + 1));
-  const role = d.prepare(`INSERT OR IGNORE INTO crash_roles (name, color, sort) VALUES (?, ?, ?)`);
-  CRASH_ROLES.forEach((r, i) => role.run(r.name, r.color, i + 1));
+  const role = d.prepare(`INSERT OR IGNORE INTO crash_roles (name, short, color, sort) VALUES (?, ?, ?, ?)`);
+  CRASH_ROLES.forEach((r, i) => role.run(r.name, r.short, r.color, i + 1));
 
   _db = d;
   return d;

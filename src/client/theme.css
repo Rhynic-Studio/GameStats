@@ -540,3 +540,84 @@ table td:last-child button {
 .role-name {
   font-weight: 500;
 }
+
+/* ---------- 手机 ---------- */
+
+button.quiet.danger {
+  color: #b42318;
+}
+
+button.quiet.danger:hover:not(:disabled) {
+  background: #fdeceb;
+  color: #b42318;
+}
+
+@media (max-width: 680px) {
+  body {
+    font-size: 13.5px;
+  }
+
+  .page {
+    padding: 14px 12px 48px;
+  }
+
+  .home {
+    padding: 44px 16px;
+  }
+
+  .home h1 {
+    font-size: 22px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .topbar nav {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .card-body {
+    padding: 12px;
+  }
+
+  .card-head {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  th,
+  td {
+    padding: 7px 10px;
+  }
+
+  .fields {
+    gap: 10px;
+  }
+
+  .kv {
+    grid-template-columns: 70px 1fr;
+    gap: 8px 10px;
+  }
+
+  .pair input {
+    width: 100%;
+  }
+}
+
+/* 窄屏时表格横向滚动，不撑破页面 */
+@media (max-width: 680px) {
+  .card-body > table,
+  .card-body.flush > table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+}

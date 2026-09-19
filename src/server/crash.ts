@@ -25,7 +25,7 @@ const num = (v: unknown) => Number(v);
 export function lists() {
   const d = db();
   return {
-    roles: d.prepare(`SELECT id, name, color FROM crash_roles ORDER BY sort, id`).all() as Row[],
+    roles: d.prepare(`SELECT id, name, short, color FROM crash_roles ORDER BY sort, id`).all() as Row[],
     players: d.prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[],
     rules: Object.values(RULES).map((r) => ({ key: r.key, label: r.label, poolSize: r.poolSize })),
     roundResults: ROUND_RESULTS.map((r) => ({ key: r.key })),
@@ -119,10 +119,11 @@ const playerNames = () =>
     (db().prepare(`SELECT id, name FROM players`).all() as Row[]).map((r) => [num(r.id), String(r.name)]),
   );
 
-const roleList = (): ListItem[] =>
-  (db().prepare(`SELECT id, name FROM crash_roles ORDER BY sort, id`).all() as Row[]).map((r) => ({
+const roleList = (): (ListItem & { short: string })[] =>
+  (db().prepare(`SELECT id, name, short FROM crash_roles ORDER BY sort, id`).all() as Row[]).map((r) => ({
     id: num(r.id),
     name: String(r.name),
+    short: String(r.short ?? r.name),
   }));
 
 function toSummary(m: RawMatch, d: ReturnType<typeof derive>, names: Map<number, string>): CrashSummary {
@@ -403,7 +404,7 @@ function matrixTable(
   navGroup: string | undefined,
   navLabel: string,
   title: string,
-  roles: ListItem[],
+  roles: (ListItem & { short?: string })[],
   facts: RoundFact[],
 ): MatrixTable {
   const tally = new Map<string, [number, number]>();
@@ -422,10 +423,10 @@ function matrixTable(
     title,
     rowHeader: '角色',
     colHeader: '对手角色',
-    cols: roles.map((r) => ({ id: r.id, name: r.name })),
+    cols: roles.map((r) => ({ id: r.id, name: r.short ?? r.name })),
     rows: roles.map((me) => ({
       id: me.id,
-      name: me.name,
+      name: me.short ?? me.name,
       cells: roles.map((opp) => {
         const t = tally.get(`${me.id}:${opp.id}`);
         return t ? rate(t[0], t[1]) : null;

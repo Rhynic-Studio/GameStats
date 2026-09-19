@@ -3,3 +3,5 @@ dist/
 .npm-cache/
 .chromium/
 data/
+result
+.nix-cache/

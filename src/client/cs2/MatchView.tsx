@@ -47,6 +47,16 @@ export default function MatchView() {
             <Link to={`/cs2/${m.id}/edit`}>
               <button className="primary">修改</button>
             </Link>
+            <button
+              className="quiet danger"
+              onClick={async () => {
+                if (!confirm('删掉这一场？')) return;
+                await cs2.remove(m.id);
+                nav('/cs2');
+              }}
+            >
+              删除
+            </button>
           </>
         }
         flush

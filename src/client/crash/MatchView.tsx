@@ -57,6 +57,16 @@ export default function MatchView() {
             <Link to={`/crash/${m.id}/edit`}>
               <button className="primary">修改</button>
             </Link>
+            <button
+              className="quiet danger"
+              onClick={async () => {
+                if (!confirm('删掉这一场？')) return;
+                await crash.remove(m.id);
+                nav('/crash');
+              }}
+            >
+              删除
+            </button>
           </>
         }
         flush

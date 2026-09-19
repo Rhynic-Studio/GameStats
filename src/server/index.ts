@@ -71,11 +71,12 @@ api.get('/crash/stats', (c) => {
 
 app.route('/api', api);
 
-app.use('/*', serveStatic({ root: './dist/web' }));
-app.get('*', serveStatic({ path: './dist/web/index.html' }));
+const webRoot = process.env.WEB_ROOT ?? './dist/web';
+app.use('/*', serveStatic({ root: webRoot }));
+app.get('*', serveStatic({ path: `${webRoot}/index.html` }));
 
 const port = Number(process.env.PORT ?? 8787);
 db();
-serve({ fetch: app.fetch, port }, (info) => {
+serve({ fetch: app.fetch, port, hostname: process.env.HOST }, (info) => {
   console.log(`http://127.0.0.1:${info.port}`);
 });

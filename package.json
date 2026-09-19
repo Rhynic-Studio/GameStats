@@ -8,10 +8,11 @@
     "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "tsx watch src/server/index.ts",
     "dev:web": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:server",
     "start": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "build:server": "esbuild src/server/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/server.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
@@ -29,5 +30,8 @@
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
