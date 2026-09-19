@@ -1,4 +1,4 @@
-import { db } from './db.ts';
+import { db, playersWithMatches } from './db.ts';
 import { PENDING } from '../shared/crash.ts';
 import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, WIN_KINDS, isPlayed, winnerOf } from '../shared/crash.ts';
 import type { CrashRuleset } from '../shared/types.ts';
@@ -26,7 +26,7 @@ export function lists() {
   const d = db();
   return {
     roles: d.prepare(`SELECT id, name, short, color FROM crash_roles ORDER BY sort, id`).all() as Row[],
-    players: d.prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[],
+    players: playersWithMatches() as unknown as Row[],
     rules: Object.values(RULES).map((r) => ({ key: r.key, label: r.label, poolSize: r.poolSize })),
     roundResults: ROUND_RESULTS.map((r) => ({ key: r.key })),
     winKinds: WIN_KINDS,
@@ -529,11 +529,10 @@ export function stats(playerId?: number): StatTable[] {
         { key: '胜率', label: '胜率', kind: 'percent' },
         { key: '轮数', label: '轮数', kind: 'number' },
       ],
-      (db().prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[]).map((p) => {
-        const id = num(p.id);
-        const rows = roundFacts.filter((f) => f.myPlayer === id && f.initiative);
+      playersWithMatches().map((p) => {
+        const rows = roundFacts.filter((f) => f.myPlayer === p.id && f.initiative);
         return {
-          玩家: { id, name: String(p.name) } as Cell,
+          玩家: { id: p.id, name: p.name } as Cell,
           胜率: rate(rows.filter((f) => f.won).length, rows.length),
           轮数: rows.length,
         };

@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import type { Player } from '../shared/types.ts';
 
 const CS2_SCHEMA = `
 CREATE TABLE IF NOT EXISTS cs2_items (
@@ -133,4 +134,23 @@ export function db(): DatabaseSync {
 
   _db = d;
   return d;
+}
+
+/**
+ * 玩家是输入对局时顺手建的，对局删掉以后就会留下没人上过场的空壳
+ * ——名字打错一次就会一直挂在候选里。所以列候选、铺统计表都只认
+ * 确实打过的人，空壳自己就不露面了，不用去删它：哪天再输入同一个名字，
+ * 拿回来的还是原来那个 id。
+ */
+export function playersWithMatches(): Player[] {
+  return db()
+    .prepare(
+      `SELECT id, name FROM players
+        WHERE id IN (
+          SELECT player_a FROM crash_matches UNION SELECT player_b FROM crash_matches
+          UNION SELECT player_a FROM cs2_matches UNION SELECT player_b FROM cs2_matches
+        )
+        ORDER BY name`,
+    )
+    .all() as unknown as Player[];
 }

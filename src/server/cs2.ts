@@ -1,4 +1,4 @@
-import { db } from './db.ts';
+import { db, playersWithMatches } from './db.ts';
 import { roundsOf } from '../shared/types.ts';
 import type { MatchDetail, MatchSummary, StatTable, Cell } from '../shared/types.ts';
 
@@ -22,7 +22,7 @@ export function lists() {
   return {
     items: d.prepare(`SELECT id, name FROM cs2_items ORDER BY sort, id`).all() as Row[],
     modes: d.prepare(`SELECT id, name FROM cs2_modes ORDER BY sort, id`).all() as Row[],
-    players: d.prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[],
+    players: playersWithMatches() as unknown as Row[],
   };
 }
 
