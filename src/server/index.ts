@@ -99,7 +99,18 @@ app.use('*', async (c, next) => {
   return c.html(prefix ? indexHtml.replace(/<head>/, `<head>\n    <base href="${prefix}">`) : indexHtml);
 });
 
-app.use('/*', serveStatic({ root: webRoot }));
+// 直接刷新深层链接（/前缀/crash）时，页面里的相对资源会被解析成
+// /前缀/crash/assets/xxx，这里砍掉 /assets/ 之前的部分再找一次。
+app.use(
+  '/*',
+  serveStatic({
+    root: webRoot,
+    rewriteRequestPath: (path) => {
+      const at = path.indexOf('/assets/');
+      return at > 0 ? path.slice(at) : path;
+    },
+  }),
+);
 
 const port = Number(process.env.PORT ?? 8787);
 db();

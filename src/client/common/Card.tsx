@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 export function Card({
   title,
@@ -31,7 +32,7 @@ export function Crumbs({ items }: { items: { label: string; to?: string }[] }) {
       {items.map((c, i) => (
         <span key={i}>
           {i > 0 && <span className="sep">/</span>}
-          {c.to ? <a href={c.to}>{c.label}</a> : c.label}
+          {c.to ? <Link to={c.to}>{c.label}</Link> : c.label}
         </span>
       ))}
     </div>
@@ -50,13 +51,13 @@ export function TopBar({
   return (
     <div className="topbar">
       <div className="crumbs">
-        <a href="/">游戏</a>
+        <Link to="/">游戏</Link>
         <span className="sep">/</span>
         {name}
       </div>
       <nav>
-        {current === "list" ? <span>对局记录</span> : <a href={`/${game}`}>对局记录</a>}
-        {current === "stats" ? <span>统计</span> : <a href={`/${game}/stats`}>统计</a>}
+        {current === "list" ? <span>对局记录</span> : <Link to={`/${game}`}>对局记录</Link>}
+        {current === "stats" ? <span>统计</span> : <Link to={`/${game}/stats`}>统计</Link>}
       </nav>
     </div>
   );
