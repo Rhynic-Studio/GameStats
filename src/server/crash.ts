@@ -457,7 +457,8 @@ export function stats(playerId?: number): StatTable[] {
         { key: '出现', label: '出现', kind: 'number' },
       ],
       roles.map((role) => {
-        const rows = poolFacts.filter((f) => f.roleId === role.id);
+        // 初见模式没有 ban/pick，不计入 BP 率
+        const rows = poolFacts.filter((f) => f.roleId === role.id && f.rule !== 'first');
         return {
           角色: roleCell(role),
           bp率: rate(rows.filter((f) => f.banned || f.picked).length, rows.length),

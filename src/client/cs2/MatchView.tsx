@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cs2, type Cs2Lists } from '../common/api.ts';
-import { Card, Crumbs } from '../common/Card.tsx';
+import { Card, Crumbs, DeleteButton } from '../common/Card.tsx';
 import { roundsOf } from '../../shared/types.ts';
 import type { MatchDetail } from '../../shared/types.ts';
 
@@ -47,16 +47,12 @@ export default function MatchView() {
             <Link to={`/cs2/${m.id}/edit`}>
               <button className="primary">修改</button>
             </Link>
-            <button
-              className="quiet danger"
-              onClick={async () => {
-                if (!confirm('删掉这一场？')) return;
+            <DeleteButton
+              onConfirm={async () => {
                 await cs2.remove(m.id);
                 nav('/cs2');
               }}
-            >
-              删除
-            </button>
+            />
           </>
         }
         flush

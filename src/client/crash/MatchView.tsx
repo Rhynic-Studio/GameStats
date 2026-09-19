@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
-import { Card, Crumbs } from '../common/Card.tsx';
+import { Card, Crumbs, DeleteButton } from '../common/Card.tsx';
 import { MAX_ROUNDS, RULES, WIN_BY, initiativeDecider, resultLabel, scoreBefore, sideOf, winnerOf } from '../../shared/crash.ts';
 import type { CrashLists } from '../common/api.ts';
 import type { CrashMatchDetail } from '../../shared/types.ts';
@@ -57,16 +57,12 @@ export default function MatchView() {
             <Link to={`/crash/${m.id}/edit`}>
               <button className="primary">修改</button>
             </Link>
-            <button
-              className="quiet danger"
-              onClick={async () => {
-                if (!confirm('删掉这一场？')) return;
+            <DeleteButton
+              onConfirm={async () => {
                 await crash.remove(m.id);
                 nav('/crash');
               }}
-            >
-              删除
-            </button>
+            />
           </>
         }
         flush

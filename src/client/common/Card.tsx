@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 export function Card({
   title,
@@ -59,5 +59,42 @@ export function TopBar({
         {current === "stats" ? <span>统计</span> : <a href={`/${game}/stats`}>统计</a>}
       </nav>
     </div>
+  );
+}
+
+/** 就地确认的删除按钮，不弹系统对话框 */
+export function DeleteButton({ onConfirm }: { onConfirm: () => void | Promise<void> }) {
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (!asking) {
+    return (
+      <button className="quiet danger" onClick={() => setAsking(true)}>
+        删除
+      </button>
+    );
+  }
+
+  return (
+    <span className="confirm">
+      <span className="muted small">确定删掉？</span>
+      <button
+        className="danger-solid"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await onConfirm();
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        删除
+      </button>
+      <button className="quiet" disabled={busy} onClick={() => setAsking(false)}>
+        取消
+      </button>
+    </span>
   );
 }
