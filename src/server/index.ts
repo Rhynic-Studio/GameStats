@@ -12,7 +12,12 @@ const api = new Hono();
 
 api.onError((err, c) => c.json({ error: err instanceof Error ? err.message : String(err) }, 400));
 
-api.get('/games', (c) => c.json([{ slug: 'cs2', name: 'CS2 单挑' }, { slug: 'crash', name: 'Crash' }]));
+const GAMES = [
+  { slug: 'cs2', name: 'CS2 单挑' },
+  { slug: 'crash', name: 'Crash' },
+];
+
+api.get('/games', (c) => c.json(GAMES));
 
 /* ---------------- cs2 ---------------- */
 
@@ -77,26 +82,54 @@ const webRoot = process.env.WEB_ROOT ?? './dist/web';
 const indexHtml = readFileSync(join(webRoot, 'index.html'), 'utf8');
 
 /**
- * 部署在子路径下时前端要知道前缀。X-Forwarded-Prefix 优先，其次 BASE_PATH。
- * 两个都没有就不注入 <base>：资源本身就是相对路径，跟着地址栏走，
- * 放在任意前缀下都能开——只有直接刷新深层链接时才需要显式配一个。
+ * 这个应用可以被挂在任意路径下——根、/game-stats/、甚至同时好几处，
+ * 所以前缀按请求算，不是一个进程级配置：
+ *
+ *   1. 代理剥掉了前缀，就得用 X-Forwarded-Prefix 说一声剥掉的是哪一段；
+ *   2. 代理没剥，路径里就带着前缀——第一个游戏路径段之前的部分就是它；
+ *   3. 两者都没有才是真·根部署。
+ *
+ * 兜底留一个 BASE_PATH 环境变量，给「剥了前缀又没法加请求头」的代理用。
  */
-function prefixOf(c: { req: { header: (k: string) => string | undefined } }): string | null {
-  const raw = (c.req.header('x-forwarded-prefix') ?? process.env.BASE_PATH ?? '').trim();
-  if (!raw || raw === '/') return null;
-  return (raw.startsWith('/') ? raw : `/${raw}`).replace(/\/+$/, '') + '/';
+function prefixOf(c: { req: { header: (k: string) => string | undefined; url: string } }): string {
+  const forwarded = (c.req.header('x-forwarded-prefix') ?? '').trim();
+  if (forwarded && forwarded !== '/') {
+    return `/${forwarded.replace(/^\/+|\/+$/g, '')}/`;
+  }
+
+  const segments = new URL(c.req.url).pathname.split('/').filter(Boolean);
+  const at = segments.findIndex((s) => GAMES.some((g) => g.slug === s));
+  const before = at === -1 ? segments : segments.slice(0, at);
+  if (before.length > 0) return `/${before.join('/')}/`;
+  if (at !== -1) return '/';
+
+  const fallback = (process.env.BASE_PATH ?? '').trim();
+  return fallback && fallback !== '/' ? `/${fallback.replace(/^\/+|\/+$/g, '')}/` : '/';
 }
 
-// 没有扩展名的路径当页面请求：返回注入了 <base> 的 index.html，
-// 这样资源、接口、前端路由都相对这个前缀解析。
+// 代理没剥前缀时，路径里就带着前缀：/game-stats/api/…、/game-stats/assets/…。
+// 把 /api/ 或 /assets/ 之前那一段砍掉重走一遍，于是同一份构建挂在哪个前缀下都行，
+// 也不用要求代理必须剥前缀——剥不剥都认。
+app.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  const at = Math.max(path.indexOf('/api/'), path.indexOf('/assets/'));
+  if (at > 0) {
+    const url = new URL(c.req.url);
+    url.pathname = path.slice(at);
+    return app.fetch(new Request(url, c.req.raw));
+  }
+  await next();
+});
+
+// 没有扩展名的路径当页面请求：返回 index.html，并带上 <base>。
+// 资源和前端路由都相对它解析，所以同一份构建挂在哪个前缀下都对。
 app.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (path.startsWith('/api') || extname(path)) {
     await next();
     return;
   }
-  const prefix = prefixOf(c);
-  return c.html(prefix ? indexHtml.replace(/<head>/, `<head>\n    <base href="${prefix}">`) : indexHtml);
+  return c.html(indexHtml.replace(/<head>/, `<head>\n    <base href="${prefixOf(c)}">`));
 });
 
 // 直接刷新深层链接（/前缀/crash）时，页面里的相对资源会被解析成

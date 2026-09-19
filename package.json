@@ -1,7 +1,7 @@
 {
   "name": "game-stats",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "多游戏对战数据统计站（内网人工录入）",
   "scripts": {
