@@ -36,7 +36,7 @@ export default function MatchList() {
                 <th className="plain">规则</th>
                 <th className="plain">BP 先手</th>
                 <th className="plain">比分</th>
-                <th className="plain num">进池 / BP / 轮</th>
+                <th className="plain num">角色池 / BP</th>
                 <th className="plain">备注</th>
               </tr>
             </thead>
@@ -54,10 +54,10 @@ export default function MatchList() {
                   <td>
                     <b>{m.score[0]}</b> : <b>{m.score[1]}</b>
                     {m.isDraw && <span className="muted small"> 平局</span>}
-                    {!m.concluded && <span className="muted small"> 进行中</span>}
+                    {m.inProgress && <span className="muted small"> 进行中</span>}
                   </td>
                   <td className="num muted small">
-                    {m.poolCount} / {m.draftCount} / {m.roundsDone}
+                    {m.poolCount} / {m.draftCount}
                   </td>
                   <td className="muted small">{m.note}</td>
                 </tr>

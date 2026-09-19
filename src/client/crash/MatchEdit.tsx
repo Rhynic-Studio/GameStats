@@ -2,16 +2,30 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
-import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, scoreBefore, sideOf, winnerOf } from '../../shared/crash.ts';
+import {
+  MAX_ROUNDS,
+  PENDING,
+  RULES,
+  ROUND_RESULTS,
+  WIN_BY,
+  WIN_KINDS,
+  hasBuff,
+  initiativeDecider,
+  resultLabel,
+  scoreBefore,
+  sideOf,
+  winnerOf,
+} from '../../shared/crash.ts';
 import type { CrashLists } from '../common/api.ts';
 import type { CrashRound } from '../../shared/types.ts';
 
+const other = (s: 0 | 1): 0 | 1 => (s === 0 ? 1 : 0);
 const emptyRound = (idx: number): CrashRound => ({
   idx,
   initiativeSide: null,
   roleA: null,
   roleB: null,
-  result: 'pending',
+  result: PENDING,
   winKind: '',
 });
 
@@ -49,47 +63,42 @@ export default function MatchEdit() {
     })().catch((e) => setErr(String(e.message ?? e)));
   }, [id]);
 
-  const ruleset = RULES[rule] ?? RULES.bp;
-  const roleName = (rid: number) => lists?.roles.find((r) => r.id === rid)?.name ?? '?';
+  const nameA = playerA.trim() || '玩家1';
+  const nameB = playerB.trim() || '玩家2';
+  const name = (s: 0 | 1) => (s === 0 ? nameA : nameB);
 
-  /** 换规则时把不属于新槽位序列的 ban/pick 丢掉 */
+  const ruleset = RULES[rule] ?? RULES.bp;
+  const roleName = (rid: number | null) => (rid === null ? '—' : (lists?.roles.find((r) => r.id === rid)?.name ?? '?'));
+
   const pickRule = (key: string) => {
     setRule(key);
-    const slots = (RULES[key] ?? RULES.bp).slots.length;
-    setDraft(Object.fromEntries(Object.entries(draft).filter(([seq]) => Number(seq) < slots)));
+    setDraft(Object.fromEntries(Object.entries(draft).filter(([seq]) => Number(seq) < (RULES[key] ?? RULES.bp).slots.length)));
   };
 
-  const draftByRole = useMemo(() => {
-    const m = new Map<number, { seq: number; kind: 'ban' | 'pick'; side: 'first' | 'second' }>();
-    for (const [seq, rid] of Object.entries(draft)) {
-      const slot = ruleset.slots[Number(seq)];
-      if (slot) m.set(rid, { seq: Number(seq), ...slot });
-    }
-    return m;
-  }, [draft, ruleset]);
-
+  const usedRoles = useMemo(() => new Set(Object.values(draft)), [draft]);
   const current = ruleset.slots.findIndex((_, i) => draft[i] === undefined);
-  /** 每一方 pick 到的角色，逐轮就从这里面出 */
+  const available = pool.filter((rid) => !usedRoles.has(rid));
+
   const sidePicks: [number[], number[]] = [[], []];
   for (const [seq, rid] of Object.entries(draft)) {
     const slot = ruleset.slots[Number(seq)];
     if (slot?.kind === 'pick') sidePicks[sideOf(slot, firstSide)].push(rid);
   }
 
-  const parsedRounds = Array.from({ length: MAX_ROUNDS }, (_, i) => rounds.find((r) => r.idx === i + 1) ?? emptyRound(i + 1));
-  const terminal = parsedRounds.filter((r) => r.result !== 'pending').length;
+  const all = Array.from({ length: MAX_ROUNDS }, (_, i) => rounds.find((r) => r.idx === i + 1) ?? emptyRound(i + 1));
+  const done = all.filter((r) => r.result !== PENDING);
   const score: [number, number] = [0, 0];
-  for (const r of parsedRounds) {
+  for (const r of all) {
     const w = winnerOf(r.result);
     if (w !== null) score[w]++;
   }
-  const concluded = score[0] >= WIN_BY || score[1] >= WIN_BY || terminal >= MAX_ROUNDS;
-  const visible = concluded ? Math.max(terminal, 1) : Math.min(terminal + 1, MAX_ROUNDS);
+  const concluded = score[0] >= WIN_BY || score[1] >= WIN_BY || done.length >= MAX_ROUNDS;
+  const visible = concluded ? Math.max(done.length, 1) : Math.min(done.length + 1, MAX_ROUNDS);
 
   const setRound = (idx: number, patch: Partial<CrashRound>) =>
-    setRounds(parsedRounds.map((r) => (r.idx === idx ? { ...r, ...patch } : r)));
+    setRounds(all.map((r) => (r.idx === idx ? { ...r, ...patch } : r)));
 
-  const save = async () => {
+  const save = async (inProgress: boolean) => {
     setErr(null);
     try {
       const body = {
@@ -99,9 +108,10 @@ export default function MatchEdit() {
         rule,
         firstSide,
         note,
+        inProgress,
         pool,
         draft: Object.entries(draft).map(([seq, roleId]) => ({ seq: Number(seq), roleId })),
-        rounds: parsedRounds.filter((r) => r.result !== 'pending' || r.roleA || r.roleB || r.initiativeSide !== null),
+        rounds: all.slice(0, visible).filter((r) => r.result !== PENDING || r.roleA || r.roleB),
       };
       if (id) await crash.update(Number(id), body);
       else await crash.create(body);
@@ -122,17 +132,20 @@ export default function MatchEdit() {
         items={[
           { label: '游戏', to: '/' },
           { label: 'Crash', to: '/crash' },
-          ...(id ? [{ label: '这一场', to: `/crash/${id}` }] : []),
+          ...(id ? [{ label: '查看对局', to: `/crash/${id}` }] : []),
           { label: id ? '修改' : '新的一场' },
         ]}
       />
 
       <Card
-        title={id ? '修改这一场' : '新的一场'}
+        title={id ? '修改对局' : '新的一场'}
         actions={
           <>
             <button onClick={() => nav(id ? `/crash/${id}` : '/crash')}>取消</button>
-            <button className="primary" onClick={save} disabled={!playerA.trim() || !playerB.trim()}>
+            <button onClick={() => save(true)} disabled={!playerA.trim() || !playerB.trim()}>
+              暂存
+            </button>
+            <button className="primary" onClick={() => save(false)} disabled={!playerA.trim() || !playerB.trim()}>
               保存
             </button>
           </>
@@ -169,8 +182,8 @@ export default function MatchEdit() {
           <label className="field">
             BP 先手方
             <select value={firstSide} onChange={(e) => setFirstSide(Number(e.target.value) as 0 | 1)}>
-              <option value={0}>{playerA || '玩家1'}</option>
-              <option value={1}>{playerB || '玩家2'}</option>
+              <option value={0}>{nameA}</option>
+              <option value={1}>{nameB}</option>
             </select>
           </label>
           <label className="field">
@@ -180,24 +193,20 @@ export default function MatchEdit() {
         </div>
       </Card>
 
-      <Card title={`出现（${pool.length} / ${ruleset.poolSize}）`}>
+      <Card title={`角色池（${pool.length} / ${ruleset.poolSize}）`}>
         <div className="chips">
-          {lists.roles.map((r) => {
-            const on = pool.includes(r.id);
-            const inDraft = draftByRole.has(r.id);
-            return (
-              <button
-                key={r.id}
-                className={`chip${on ? ' on' : ''}${inDraft ? ' used' : ''}`}
-                onClick={() => {
-                  if (inDraft) return;
-                  setPool(on ? pool.filter((x) => x !== r.id) : [...pool, r.id]);
-                }}
-              >
-                {r.name}
-              </button>
-            );
-          })}
+          {lists.roles.map((r) => (
+            <button
+              key={r.id}
+              className={`chip${pool.includes(r.id) ? ' on' : ''}`}
+              onClick={() => {
+                if (usedRoles.has(r.id)) return;
+                setPool(pool.includes(r.id) ? pool.filter((x) => x !== r.id) : [...pool, r.id]);
+              }}
+            >
+              {r.name}
+            </button>
+          ))}
         </div>
       </Card>
 
@@ -207,20 +216,19 @@ export default function MatchEdit() {
             {ruleset.slots.map((slot, i) => {
               const no = slot.kind === 'ban' ? ++banNo : ++pickNo;
               const rid = draft[i];
-              const owner = sideOf(slot, firstSide);
               return (
                 <tr key={i} className={i === current ? 'current-row' : ''}>
                   <td className="muted small" style={{ width: 70 }}>
                     {no}
                     {slot.kind}
                   </td>
-                  <td style={{ width: 150 }}>
-                    {owner === 0 ? playerA || '玩家1' : playerB || '玩家2'}
+                  <td style={{ width: 170 }}>
+                    {name(sideOf(slot, firstSide))}
                     {slot.side === 'first' && <span className="muted small"> BP先手</span>}
                   </td>
-                  <td>{rid ? roleName(rid) : i === current ? '← 当前' : '—'}</td>
+                  <td>{rid === undefined ? (i === current ? '← 当前' : '—') : roleName(rid)}</td>
                   <td style={{ width: 76 }}>
-                    {rid && (
+                    {rid !== undefined && (
                       <button
                         className="quiet"
                         onClick={() => setDraft(Object.fromEntries(Object.entries(draft).filter(([k]) => Number(k) !== i)))}
@@ -235,98 +243,124 @@ export default function MatchEdit() {
           </tbody>
         </table>
 
-        <div className="chips" style={{ marginTop: 12 }}>
-          {pool.length === 0 && <span className="muted small">先从上面选出现名单</span>}
-          {pool.map((rid) => {
-            const used = draftByRole.get(rid);
-            return (
-              <button
-                key={rid}
-                className={`chip${used ? ' used' : ''}`}
-                disabled={!!used || current < 0}
-                onClick={() => setDraft({ ...draft, [current]: rid })}
-              >
+        <div className="chips" style={{ marginTop: 14 }}>
+          {available.length === 0 ? (
+            <span className="muted small">{pool.length === 0 ? '先从上面选角色池' : '都选完了'}</span>
+          ) : (
+            available.map((rid) => (
+              <button key={rid} className="chip" disabled={current < 0} onClick={() => setDraft({ ...draft, [current]: rid })}>
                 {roleName(rid)}
               </button>
-            );
-          })}
+            ))
+          )}
         </div>
       </Card>
 
       <Card title={`逐轮（${score[0]} : ${score[1]}）`}>
-        {parsedRounds.slice(0, visible).map((r) => {
-          const before = scoreBefore(parsedRounds, r.idx);
-          const mine = r.initiativeSide === null ? null : before;
-          void mine;
-                  const w = winnerOf(r.result);
+        {all.slice(0, visible).map((r) => {
+          const decider = initiativeDecider(all, r.idx, firstSide);
+          const before = scoreBefore(all, r.idx);
+          const buffA = hasBuff(all, r.idx, 0);
+          const buffB = hasBuff(all, r.idx, 1);
+          const w = winnerOf(r.result);
           return (
             <div key={r.idx} className="round-block">
               <div className="round-head">
                 <b>第 {r.idx} 轮</b>
-                <span className="muted small">
-                  {playerA || '玩家1'} buff {before[0] !== 0 ? '有' : '无'} · {playerB || '玩家2'} buff{' '}
-                  {before[1] !== 0 ? '有' : '无'}
-                </span>
                 {w !== null && (
-                  <span className="tag done">{w === 0 ? playerA || '玩家1' : playerB || '玩家2'} 拿下</span>
+                  <span className="tag done">
+                    {resultLabel(r.result, nameA, nameB)}
+                    {r.winKind ? ` · ${r.winKind}` : ''}
+                  </span>
                 )}
               </div>
-              <div className="fields">
-                <label className="field">
-                  先攻方
+
+              <div className="kv">
+                <span>决定先攻</span>
+                <div>
+                  {decider === null ? '—' : `${name(decider)}`}
+                  {r.idx === 1 && <span className="muted small">（BP 先手方）</span>}
+                  {r.idx > 1 && <span className="muted small">（上一轮败方）</span>}
+                </div>
+
+                <span>他的选择</span>
+                <div>
                   <select
-                    value={r.initiativeSide ?? ''}
-                    onChange={(e) =>
-                      setRound(r.idx, { initiativeSide: e.target.value === '' ? null : (Number(e.target.value) as 0 | 1) })
-                    }
+                    value={r.initiativeSide === null || decider === null ? '' : r.initiativeSide === decider ? 'self' : 'other'}
+                    disabled={decider === null}
+                    onChange={(e) => {
+                      if (decider === null) return;
+                      setRound(r.idx, {
+                        initiativeSide: e.target.value === '' ? null : e.target.value === 'self' ? decider : other(decider),
+                      });
+                    }}
                   >
                     <option value="">未定</option>
-                    <option value={0}>{playerA || '玩家1'}</option>
-                    <option value={1}>{playerB || '玩家2'}</option>
+                    <option value="self">先攻</option>
+                    <option value="other">后攻</option>
                   </select>
-                </label>
+                </div>
+
                 {([0, 1] as const).map((side) => (
-                  <label className="field" key={side}>
-                    {side === 0 ? playerA || '玩家1' : playerB || '玩家2'}
-                    <select
-                      value={(side === 0 ? r.roleA : r.roleB) ?? ''}
-                      onChange={(e) =>
-                        setRound(r.idx, side === 0
-                          ? { roleA: e.target.value === '' ? null : Number(e.target.value) }
-                          : { roleB: e.target.value === '' ? null : Number(e.target.value) })
-                      }
-                    >
-                      <option value="">—</option>
-                      {sidePicks[side].map((rid) => (
-                        <option key={rid} value={rid}>
-                          {roleName(rid)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div key={side} style={{ display: 'contents' }}>
+                    <span>{name(side)} 出战</span>
+                    <div>
+                      <select
+                        value={(side === 0 ? r.roleA : r.roleB) ?? ''}
+                        onChange={(e) =>
+                          setRound(
+                            r.idx,
+                            side === 0
+                              ? { roleA: e.target.value === '' ? null : Number(e.target.value) }
+                              : { roleB: e.target.value === '' ? null : Number(e.target.value) },
+                          )
+                        }
+                      >
+                        <option value="">—</option>
+                        {sidePicks[side].map((rid) => (
+                          <option key={rid} value={rid}>
+                            {roleName(rid)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 ))}
-                <label className="field">
-                  结果
+
+                <span>结果</span>
+                <div>
                   <select value={r.result} onChange={(e) => setRound(r.idx, { result: e.target.value })}>
+                    <option value={PENDING}>未录</option>
                     {ROUND_RESULTS.map((x) => (
                       <option key={x.key} value={x.key}>
-                        {x.label}
+                        {resultLabel(x.key, nameA, nameB)}
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="field">
-                  胜利条件
+                </div>
+
+                <span>胜利条件</span>
+                <div>
                   <select
                     value={r.winKind}
                     disabled={w === null}
                     onChange={(e) => setRound(r.idx, { winKind: e.target.value })}
                   >
                     <option value="">—</option>
-                    <option value="战胜">战胜</option>
-                    <option value="积分胜">积分胜</option>
+                    {WIN_KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
                   </select>
-                </label>
+                </div>
+
+                <span>战败补偿</span>
+                <div className="muted">
+                  {before[0] === 0 && before[1] === 0
+                    ? '无'
+                    : [buffA ? nameA : null, buffB ? nameB : null].filter(Boolean).join('、')}
+                </div>
               </div>
             </div>
           );

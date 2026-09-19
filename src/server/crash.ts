@@ -1,5 +1,6 @@
 import { db } from './db.ts';
-import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, isPlayed, winnerOf } from '../shared/crash.ts';
+import { PENDING } from '../shared/crash.ts';
+import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, WIN_KINDS, isPlayed, winnerOf } from '../shared/crash.ts';
 import type { CrashRuleset } from '../shared/types.ts';
 import type {
   CrashMatchDetail,
@@ -27,7 +28,8 @@ export function lists() {
     roles: d.prepare(`SELECT id, name FROM crash_roles ORDER BY sort, id`).all() as Row[],
     players: d.prepare(`SELECT id, name FROM players ORDER BY name`).all() as Row[],
     rules: Object.values(RULES).map((r) => ({ key: r.key, label: r.label, poolSize: r.poolSize })),
-    roundResults: ROUND_RESULTS.map((r) => ({ key: r.key, label: r.label })),
+    roundResults: ROUND_RESULTS.map((r) => ({ key: r.key })),
+    winKinds: WIN_KINDS,
   };
 }
 
@@ -39,6 +41,7 @@ interface RawMatch {
   rule: string;
   firstSide: 0 | 1;
   note: string;
+  inProgress: boolean;
   pool: number[];
   draft: Map<number, number>;
   rounds: CrashRound[];
@@ -82,6 +85,7 @@ function loadMatches(): RawMatch[] {
     rule: String(m.rule),
     firstSide: num(m.first_side) as 0 | 1,
     note: String(m.note ?? ''),
+    inProgress: num(m.in_progress) === 1,
     pool: poolBy.get(num(m.id)) ?? [],
     draft: draftBy.get(num(m.id)) ?? new Map(),
     rounds: roundBy.get(num(m.id)) ?? [],
@@ -95,7 +99,7 @@ function derive(m: RawMatch) {
   let terminal = 0;
   let sawDoubleForfeit = false;
   for (const r of m.rounds) {
-    buffs.set(r.idx, [score[0] !== 0, score[1] !== 0]);
+    buffs.set(r.idx, [score[1] !== 0, score[0] !== 0]); // 败方带 buff：对方得分不是 0
     if (r.result === 'pending') continue;
     terminal++;
     if (r.result === 'double_forfeit') sawDoubleForfeit = true;
@@ -131,6 +135,7 @@ function toSummary(m: RawMatch, d: ReturnType<typeof derive>, names: Map<number,
     ruleLabel: RULES[m.rule]?.label ?? m.rule,
     firstSide: m.firstSide,
     note: m.note,
+    inProgress: m.inProgress,
     score: d.score,
     winner: d.winner,
     isDraw: d.isDraw,
@@ -178,6 +183,7 @@ interface MatchBody {
   rule?: string;
   firstSide?: 0 | 1;
   note?: string;
+  inProgress?: boolean;
   pool?: number[];
   draft?: { seq: number; roleId: number }[];
   rounds?: CrashRound[];
@@ -209,7 +215,7 @@ function writeChildren(id: number, body: MatchBody, rule: CrashRuleset) {
     );
     for (const r of body.rounds) {
       if (r.idx < 1 || r.idx > MAX_ROUNDS) throw new Error(`轮次超出范围（最多 ${MAX_ROUNDS} 轮）`);
-      if (!ROUND_RESULTS.some((x) => x.key === r.result)) throw new Error(`未知结果: ${r.result}`);
+      if (r.result !== PENDING && !ROUND_RESULTS.some((x) => x.key === r.result)) throw new Error(`未知结果: ${r.result}`);
       ins.run(id, r.idx, r.initiativeSide ?? null, r.roleA ?? null, r.roleB ?? null, r.result, r.winKind ?? '');
     }
   }
@@ -223,8 +229,8 @@ export function createMatch(body: MatchBody): number {
   const id = num(
     db()
       .prepare(
-        `INSERT INTO crash_matches (played_at, player_a, player_b, rule, first_side, note)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO crash_matches (played_at, player_a, player_b, rule, first_side, note, in_progress)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         body.playedAt?.trim() || new Date().toISOString().slice(0, 10),
@@ -233,6 +239,7 @@ export function createMatch(body: MatchBody): number {
         rule.key,
         body.firstSide === 1 ? 1 : 0,
         body.note ?? '',
+        body.inProgress ? 1 : 0,
       ).lastInsertRowid,
   );
   writeChildren(id, body, rule);
@@ -248,7 +255,7 @@ export function updateMatch(id: number, body: MatchBody): void {
   const b = body.playerB === undefined ? num(cur.player_b) : ensurePlayer(body.playerB);
   if (a === b) throw new Error('两边不能是同一个人');
   d.prepare(
-    `UPDATE crash_matches SET played_at = ?, player_a = ?, player_b = ?, rule = ?, first_side = ?, note = ?
+    `UPDATE crash_matches SET played_at = ?, player_a = ?, player_b = ?, rule = ?, first_side = ?, note = ?, in_progress = ?
      WHERE id = ?`,
   ).run(
     body.playedAt ?? String(cur.played_at),
@@ -257,6 +264,7 @@ export function updateMatch(id: number, body: MatchBody): void {
     rule.key,
     body.firstSide === undefined ? num(cur.first_side) : body.firstSide === 1 ? 1 : 0,
     body.note ?? String(cur.note ?? ''),
+    body.inProgress === undefined ? num(cur.in_progress) : body.inProgress ? 1 : 0,
     id,
   );
   writeChildren(id, body, rule);
@@ -443,6 +451,8 @@ export function stats(playerId?: number): StatTable[] {
         { key: 'bp率', label: 'bp率', kind: 'percent' },
         { key: 'ban率', label: 'ban率', kind: 'percent' },
         { key: 'pick率', label: 'pick率', kind: 'percent' },
+        { key: '首ban率', label: '首ban率', kind: 'percent' },
+        { key: '首pick率', label: '首pick率', kind: 'percent' },
         { key: '出现', label: '出现', kind: 'number' },
       ],
       roles.map((role) => {
@@ -452,6 +462,8 @@ export function stats(playerId?: number): StatTable[] {
           bp率: rate(rows.filter((f) => f.banned || f.picked).length, rows.length),
           ban率: rate(rows.filter((f) => f.banned).length, rows.length),
           pick率: rate(rows.filter((f) => f.picked).length, rows.length),
+          首ban率: rate(rows.filter((f) => f.firstBan).length, rows.length),
+          首pick率: rate(rows.filter((f) => f.firstPick).length, rows.length),
           出现: rows.length,
         };
       }),
@@ -464,7 +476,7 @@ export function stats(playerId?: number): StatTable[] {
       'win',
       '基础',
       '角色总胜率',
-      '角色总胜率（不考虑 buff）',
+      '角色总胜率',
       [
         { key: '角色', label: '角色', kind: 'list' },
         { key: '胜率', label: '胜率', kind: 'percent' },
@@ -527,40 +539,15 @@ export function stats(playerId?: number): StatTable[] {
     ),
   );
 
-  /* 高阶 · 首 ban 首 pick 率 */
-  out.push(
-    grid(
-      'first',
-      '高阶',
-      '首 ban 首 pick 率',
-      '首 ban 首 pick 率',
-      [
-        { key: '角色', label: '角色', kind: 'list' },
-        { key: '首ban率', label: '首ban率', kind: 'percent' },
-        { key: '首pick率', label: '首pick率', kind: 'percent' },
-        { key: '出现', label: '出现', kind: 'number' },
-      ],
-      roles.map((role) => {
-        const rows = poolFacts.filter((f) => f.roleId === role.id);
-        return {
-          角色: roleCell(role),
-          首ban率: rate(rows.filter((f) => f.firstBan).length, rows.length),
-          首pick率: rate(rows.filter((f) => f.firstPick).length, rows.length),
-          出现: rows.length,
-        };
-      }),
-    ),
-  );
-
   /* 高阶 · 四类胜率，各自带矩阵 */
   const kinds: { navKey: string; label: string; title: string; keep: (s: RoundFact['buffState']) => boolean }[] = [
-    { navKey: 'nobuff', label: '无 buff 胜率', title: '无 buff 胜率', keep: (s) => s === '都无' },
-    { navKey: 'adv', label: '优势胜率', title: '优势胜率（有 buff 打无 buff）', keep: (s) => s === '我优' },
-    { navKey: 'final', label: '决战胜率', title: '决战胜率（两边都有 buff）', keep: (s) => s === '都有' },
+    { navKey: 'nobuff', label: '首发胜率', title: '首发胜率', keep: (s) => s === '都无' },
+    { navKey: 'adv', label: '优势胜率', title: '优势胜率（落后方 vs 领先方）', keep: (s) => s === '我优' },
+    { navKey: 'final', label: '决战胜率', title: '决战胜率（最终局）', keep: (s) => s === '都有' },
     {
       navKey: 'fair',
       label: '公平胜率',
-      title: '公平胜率（无 buff + 决战）',
+      title: '公平胜率（首发+最终局）',
       keep: (s) => s === '都无' || s === '都有',
     },
   ];

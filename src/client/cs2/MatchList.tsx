@@ -93,11 +93,15 @@ export default function MatchList() {
                   <td>{m.mode.name}</td>
                   <td>
                     <b>{m.scoreA}</b> : <b>{m.scoreB}</b>
-                    {m.winner && (
-                      <span className="muted small">
-                        {' '}
-                        {m.winner === 'A' ? m.playerA.name : m.playerB.name} 胜
-                      </span>
+                    {m.inProgress ? (
+                      <span className="muted small"> 进行中</span>
+                    ) : (
+                      m.winner && (
+                        <span className="muted small">
+                          {' '}
+                          {m.winner === 'A' ? m.playerA.name : m.playerB.name} 胜
+                        </span>
+                      )
                     )}
                   </td>
                   <td className="num">{m.rounds}</td>

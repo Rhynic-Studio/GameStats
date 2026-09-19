@@ -60,10 +60,10 @@ export default function MatchEdit() {
   const totalRounds = totalA + totalB > 0 ? roundsOf(totalA, totalB) : 0;
   const ok = playerA.trim() && playerB.trim() && modeId;
 
-  const save = async () => {
+  const save = async (inProgress: boolean) => {
     setErr(null);
     try {
-      const body = { playedAt, playerA, playerB, modeId, note, entries: parsed };
+      const body = { playedAt, playerA, playerB, modeId, note, inProgress, entries: parsed };
       if (id) await cs2.update(Number(id), body);
       else await cs2.create(body);
       nav('/cs2');
@@ -88,7 +88,10 @@ export default function MatchEdit() {
         actions={
           <>
             <button onClick={() => nav(id ? `/cs2/${id}` : '/cs2')}>取消</button>
-            <button className="primary" onClick={save} disabled={!ok}>
+            <button onClick={() => save(true)} disabled={!ok}>
+              暂存
+            </button>
+            <button className="primary" onClick={() => save(false)} disabled={!ok}>
               保存
             </button>
           </>

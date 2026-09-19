@@ -19,6 +19,7 @@ export interface MatchSummary {
   rounds: number;
   winner: 'A' | 'B' | null;
   note: string;
+  inProgress: boolean;
 }
 
 export interface Entry {
@@ -95,7 +96,7 @@ export interface CrashRound {
   winKind: string;
 }
 
-export interface CrashMatchDetail {
+export interface CrashMatchDetail extends CrashSummary {
   id: number;
   playedAt: string;
   playerA: Player;
@@ -108,10 +109,6 @@ export interface CrashMatchDetail {
   /** 槽位序号 → 角色 id */
   draft: Record<number, number>;
   rounds: CrashRound[];
-  score: [number, number];
-  winner: 0 | 1 | null;
-  isDraw: boolean;
-  concluded: boolean;
 }
 
 export interface CrashSummary {
@@ -123,6 +120,7 @@ export interface CrashSummary {
   ruleLabel: string;
   firstSide: 0 | 1;
   note: string;
+  inProgress: boolean;
   score: [number, number];
   winner: 0 | 1 | null;
   isDraw: boolean;

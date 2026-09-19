@@ -11,6 +11,7 @@ interface RawMatch {
   playerB: number;
   modeId: number;
   note: string;
+  inProgress: boolean;
   entries: { itemId: number; scoreA: number; scoreB: number }[];
 }
 
@@ -49,6 +50,7 @@ function loadMatches(): RawMatch[] {
     playerB: num(m.player_b),
     modeId: num(m.mode_id),
     note: String(m.note ?? ''),
+    inProgress: num(m.in_progress) === 1,
     entries: byMatch.get(num(m.id)) ?? [],
   }));
 }
@@ -71,6 +73,7 @@ function toSummary(m: RawMatch, playerNames: Map<number, string>, modeNames: Map
     rounds: roundsOf(t.a, t.b),
     winner: t.a === t.b ? null : t.a > t.b ? 'A' : 'B',
     note: m.note,
+    inProgress: m.inProgress,
   };
 }
 
@@ -102,6 +105,7 @@ export function createMatch(body: {
   playerB: string;
   modeId: number;
   note?: string;
+  inProgress?: boolean;
   entries: { itemId: number; scoreA: number; scoreB: number }[];
 }): number {
   const a = ensurePlayer(body.playerA);
@@ -110,8 +114,8 @@ export function createMatch(body: {
   const d = db();
   const id = num(
     d
-      .prepare(`INSERT INTO cs2_matches (played_at, player_a, player_b, mode_id, note) VALUES (?, ?, ?, ?, ?)`)
-      .run(body.playedAt?.trim() || new Date().toISOString().slice(0, 10), a, b, body.modeId, body.note ?? '')
+      .prepare(`INSERT INTO cs2_matches (played_at, player_a, player_b, mode_id, note, in_progress) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(body.playedAt?.trim() || new Date().toISOString().slice(0, 10), a, b, body.modeId, body.note ?? '', body.inProgress ? 1 : 0)
       .lastInsertRowid,
   );
   writeEntries(id, body.entries);
@@ -126,6 +130,7 @@ export function updateMatch(
     playerB?: string;
     modeId?: number;
     note?: string;
+    inProgress?: boolean;
     entries?: { itemId: number; scoreA: number; scoreB: number }[];
   },
 ): void {
@@ -135,12 +140,15 @@ export function updateMatch(
   const a = body.playerA === undefined ? num(cur.player_a) : ensurePlayer(body.playerA);
   const b = body.playerB === undefined ? num(cur.player_b) : ensurePlayer(body.playerB);
   if (a === b) throw new Error('两边不能是同一个人');
-  d.prepare(`UPDATE cs2_matches SET played_at = ?, player_a = ?, player_b = ?, mode_id = ?, note = ? WHERE id = ?`).run(
+  d.prepare(
+    `UPDATE cs2_matches SET played_at = ?, player_a = ?, player_b = ?, mode_id = ?, note = ?, in_progress = ? WHERE id = ?`,
+  ).run(
     body.playedAt ?? String(cur.played_at),
     a,
     b,
     body.modeId ?? num(cur.mode_id),
     body.note ?? String(cur.note ?? ''),
+    body.inProgress === undefined ? num(cur.in_progress) : body.inProgress ? 1 : 0,
     id,
   );
   if (body.entries) {

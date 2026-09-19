@@ -15,11 +15,15 @@ export default function MatchView() {
   useEffect(() => {
     Promise.all([cs2.match(Number(id)), cs2.lists()])
       .then(([mm, ll]) => {
+        if (mm.inProgress) {
+          nav(`/cs2/${mm.id}/edit`, { replace: true });
+          return;
+        }
         setM(mm);
         setLists(ll);
       })
       .catch((e) => setErr(String(e.message ?? e)));
-  }, [id]);
+  }, [id, nav]);
 
   if (err) return <div className="page"><p className="err">{err}</p></div>;
   if (!m || !lists) return <div className="page muted">加载中…</div>;

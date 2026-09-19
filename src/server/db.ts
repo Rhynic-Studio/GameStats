@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS cs2_matches (
   player_a  INTEGER NOT NULL REFERENCES players(id),
   player_b  INTEGER NOT NULL REFERENCES players(id),
   mode_id   INTEGER NOT NULL REFERENCES cs2_modes(id),
-  note      TEXT NOT NULL DEFAULT ''
+  note      TEXT NOT NULL DEFAULT '',
+  in_progress INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS cs2_entries (
@@ -49,7 +50,8 @@ CREATE TABLE IF NOT EXISTS crash_matches (
   player_b   INTEGER NOT NULL REFERENCES players(id),
   rule       TEXT NOT NULL,
   first_side INTEGER NOT NULL DEFAULT 0,
-  note       TEXT NOT NULL DEFAULT ''
+  note       TEXT NOT NULL DEFAULT '',
+  in_progress INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS crash_pool (
