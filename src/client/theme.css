@@ -115,6 +115,12 @@ td {
   border-bottom: 1px solid var(--line);
 }
 
+/* 名称列（角色 / 玩家）不折行 —— 数字列宽是固定的，挤不着它 */
+th:not(.num),
+td:not(.num) {
+  white-space: nowrap;
+}
+
 th {
   font-size: 12px;
   font-weight: 500;

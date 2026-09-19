@@ -329,7 +329,7 @@ interface PoolFact {
   banBy: number | null;
 }
 
-function buildFacts(playerId?: number) {
+function buildFacts(playerId?: number, ruleKey?: string) {
   const names = playerNames();
   const roundFacts: RoundFact[] = [];
   const poolFacts: PoolFact[] = [];
@@ -337,6 +337,8 @@ function buildFacts(playerId?: number) {
 
   for (const m of loadMatches()) {
     if (playerId !== undefined && m.playerA !== playerId && m.playerB !== playerId) continue;
+    // 规则之间数值口径不一样，统计按规则分开看
+    if (ruleKey !== undefined && m.rule !== ruleKey) continue;
     const d = derive(m);
     const rule = RULES[m.rule];
 
@@ -470,8 +472,8 @@ function matrixTable(
   };
 }
 
-export function stats(playerId?: number): StatTable[] {
-  const { roundFacts, poolFacts } = buildFacts(playerId);
+export function stats(playerId?: number, rule?: string): StatTable[] {
+  const { roundFacts, poolFacts } = buildFacts(playerId, rule);
   const roles = roleList();
   const out: StatTable[] = [];
 
@@ -489,6 +491,8 @@ export function stats(playerId?: number): StatTable[] {
         { key: 'pick率', label: 'pick率', kind: 'percent' },
         { key: '首ban率', label: '首ban率', kind: 'percent' },
         { key: '首pick率', label: '首pick率', kind: 'percent' },
+        { key: '上场率', label: '上场率', kind: 'percent' },
+        { key: '小局上场率', label: '上场率(小局)', kind: 'percent' },
         { key: '出现', label: '出现', kind: 'number' },
       ],
       roles.map((role) => {
@@ -497,6 +501,11 @@ export function stats(playerId?: number): StatTable[] {
         // 分母是角色进过候选池的场次；分子只算「选中玩家出手的」，
         // 没选玩家就是所有人合计。v2 里同一角色可能是一个人选的、另一个人 ban 的
         const mine = (who: number | null) => playerId === undefined || who === playerId;
+        // 上场率的分母是它被 pick 的场次，所以小局那列可能超过 100%
+        //（200% 就是这个角色每次上场都打满两局）
+        const pickedMatches = new Set(rows.filter((f) => f.picked && mine(f.pickBy)).map((f) => f.matchId));
+        const played = roundFacts.filter((f) => f.myRole === role.id && pickedMatches.has(f.matchId));
+        const playedMatches = new Set(played.map((f) => f.matchId));
         return {
           角色: roleCell(role),
           bp率: rate(
@@ -507,6 +516,8 @@ export function stats(playerId?: number): StatTable[] {
           pick率: rate(rows.filter((f) => f.picked && mine(f.pickBy)).length, rows.length),
           首ban率: rate(rows.filter((f) => f.firstBan && mine(f.banBy)).length, rows.length),
           首pick率: rate(rows.filter((f) => f.firstPick && mine(f.pickBy)).length, rows.length),
+          上场率: rate(playedMatches.size, pickedMatches.size),
+          小局上场率: rate(played.length, pickedMatches.size),
           出现: rows.length,
         };
       }),

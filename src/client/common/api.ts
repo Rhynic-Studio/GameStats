@@ -65,9 +65,10 @@ export const crash = {
   update: (id: number, body: unknown) => send('PUT', `${at('crash')}/matches/${id}`, body),
   remove: (id: number) => send('DELETE', `${at('crash')}/matches/${id}`),
   addPlayer: (name: string) => send('POST', `${at('crash')}/players`, { name }),
-  stats: (player?: number) => {
+  stats: (player?: number, rule?: string) => {
     const q = new URLSearchParams();
     if (player !== undefined) q.set('player', String(player));
+    if (rule) q.set('rule', rule);
     return fetch(`${at('crash')}/stats?${q}`).then(j) as Promise<StatTable[]>;
   },
 };

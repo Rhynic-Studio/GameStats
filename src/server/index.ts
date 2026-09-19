@@ -73,13 +73,17 @@ api.post('/crash/players', async (c) => {
 });
 api.get('/crash/stats', (c) => {
   const p = c.req.query('player');
-  return c.json(crash.stats(p ? Number(p) : undefined));
+  return c.json(crash.stats(p ? Number(p) : undefined, c.req.query('rule') || undefined));
 });
 
 app.route('/api', api);
 
 const webRoot = process.env.WEB_ROOT ?? './dist/web';
-const indexHtml = readFileSync(join(webRoot, 'index.html'), 'utf8');
+const indexHtmlPath = join(webRoot, 'index.html');
+// 启动时先读一次：路径不对要在这里就炸，不要等第一个请求
+readFileSync(indexHtmlPath, 'utf8');
+// 之后每次请求再读一遍 —— 文件很小，省得前端重新构建后忘了重启服务
+const indexHtml = () => readFileSync(indexHtmlPath, 'utf8');
 
 /**
  * 这个应用可以被挂在任意路径下——根、/game-stats/、甚至同时好几处，
@@ -129,7 +133,7 @@ app.use('*', async (c, next) => {
     await next();
     return;
   }
-  return c.html(indexHtml.replace(/<head>/, `<head>\n    <base href="${prefixOf(c)}">`));
+  return c.html(indexHtml().replace(/<head>/, `<head>\n    <base href="${prefixOf(c)}">`));
 });
 
 // 直接刷新深层链接（/前缀/crash）时，页面里的相对资源会被解析成
