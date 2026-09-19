@@ -42,3 +42,6 @@ export interface StatTable {
   columns: { key: string; label: string; kind: 'list' | 'number' | 'percent' }[];
   rows: Record<string, Cell>[];
 }
+
+/** 局数 = 2 × 胜方得分 − 1 */
+export const roundsOf = (a: number, b: number) => 2 * Math.max(a, b) - 1;

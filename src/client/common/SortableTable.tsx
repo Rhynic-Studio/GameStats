@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Cell, StatTable } from '../../shared/types.ts';
+import { Card } from './Card.tsx';
 
 /** 点列头排序。名单类的列按内部 id 排，数字类的列按数值排。 */
 export function StatTableView({ table }: { table: StatTable }) {
@@ -30,9 +31,7 @@ export function StatTableView({ table }: { table: StatTable }) {
   };
 
   return (
-    <section>
-      {table.group && <h2>{table.group}</h2>}
-      {table.group ? <h3>{table.title}</h3> : <h2>{table.title}</h2>}
+    <Card title={table.title} flush>
       <table>
         <thead>
           <tr>
@@ -56,6 +55,6 @@ export function StatTableView({ table }: { table: StatTable }) {
           ))}
         </tbody>
       </table>
-    </section>
+    </Card>
   );
 }

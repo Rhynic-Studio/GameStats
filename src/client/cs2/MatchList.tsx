@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../common/api.ts';
+import { Card, Crumbs } from '../common/Card.tsx';
 import type { MatchSummary } from '../../shared/types.ts';
 
 export default function MatchList() {
@@ -23,10 +24,6 @@ export default function MatchList() {
         return m.playerB.name;
       case 'mode':
         return m.mode.id;
-      case 'scoreA':
-        return m.scoreA;
-      case 'scoreB':
-        return m.scoreB;
       case 'rounds':
         return m.rounds;
       default:
@@ -55,58 +52,65 @@ export default function MatchList() {
 
   return (
     <div className="page">
-      <div className="crumbs">
-        <Link to="/">游戏</Link> / CS2 单挑
-      </div>
-      <div className="bar">
-        <h1>CS2 单挑</h1>
-        <span className="spacer" />
-        <Link to="/cs2/stats">统计</Link>
-        <Link to="/cs2/new">+ 新的一场</Link>
-      </div>
-      {err && <p className="err">{err}</p>}
-      {!matches && !err && <p>加载中…</p>}
+      <Crumbs items={[{ label: '游戏', to: '/' }, { label: 'CS2 单挑' }]} />
 
-      {matches && matches.length === 0 && <p className="muted">还没有记录。</p>}
+      <Card
+        title="对局记录"
+        actions={
+          <>
+            <Link to="/cs2/stats">统计</Link>
+            <Link to="/cs2/new">
+              <button className="primary">+ 新的一场</button>
+            </Link>
+          </>
+        }
+        flush
+      >
+        {err && <p className="err card-body">{err}</p>}
+        {!matches && !err && <p className="muted card-body">加载中…</p>}
+        {matches && matches.length === 0 && <p className="muted card-body">还没有记录。</p>}
 
-      {rows.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th onClick={() => click('playedAt')}>日期{arrow('playedAt')}</th>
-              <th onClick={() => click('playerA')}>玩家 A{arrow('playerA')}</th>
-              <th onClick={() => click('scoreA')} className="num">
-                比分{arrow('scoreA')}
-              </th>
-              <th onClick={() => click('scoreB')} className="num">
-                比分{arrow('scoreB')}
-              </th>
-              <th onClick={() => click('playerB')}>玩家 B{arrow('playerB')}</th>
-              <th onClick={() => click('mode')}>单挑{arrow('mode')}</th>
-              <th onClick={() => click('rounds')} className="num">
-                局数{arrow('rounds')}
-              </th>
-              <th className="plain">备注</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((m) => (
-              <tr key={m.id}>
-                <td>{m.playedAt}</td>
-                <td>
-                  <Link to={`/cs2/${m.id}`}>{m.playerA.name}</Link>
-                </td>
-                <td className="num">{m.scoreA}</td>
-                <td className="num">{m.scoreB}</td>
-                <td>{m.playerB.name}</td>
-                <td>{m.mode.name}</td>
-                <td className="num">{m.rounds}</td>
-                <td className="muted small">{m.note}</td>
+        {rows.length > 0 && (
+          <table>
+            <thead>
+              <tr>
+                <th onClick={() => click('playedAt')}>日期{arrow('playedAt')}</th>
+                <th onClick={() => click('playerA')}>玩家 A{arrow('playerA')}</th>
+                <th onClick={() => click('mode')}>单挑{arrow('mode')}</th>
+                <th className="plain">比分</th>
+                <th onClick={() => click('rounds')} className="num">
+                  局数{arrow('rounds')}
+                </th>
+                <th className="plain">备注</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {rows.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    <Link to={`/cs2/${m.id}`}>{m.playedAt}</Link>
+                  </td>
+                  <td>
+                    {m.playerA.name} <span className="muted">vs</span> {m.playerB.name}
+                  </td>
+                  <td>{m.mode.name}</td>
+                  <td>
+                    <b>{m.scoreA}</b> : <b>{m.scoreB}</b>
+                    {m.winner && (
+                      <span className="muted small">
+                        {' '}
+                        {m.winner === 'A' ? m.playerA.name : m.playerB.name} 胜
+                      </span>
+                    )}
+                  </td>
+                  <td className="num">{m.rounds}</td>
+                  <td className="muted small">{m.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </div>
   );
 }

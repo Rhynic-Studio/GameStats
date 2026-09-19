@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, type Lists } from '../common/api.ts';
+import { Card, Crumbs } from '../common/Card.tsx';
 import { StatTableView } from '../common/SortableTable.tsx';
 import type { StatTable } from '../../shared/types.ts';
 
@@ -32,44 +33,46 @@ export default function Stats() {
 
   return (
     <div className="page">
-      <div className="crumbs">
-        <Link to="/">游戏</Link> / <Link to="/cs2">CS2 单挑</Link> / 统计
-      </div>
-      <div className="bar">
-        <h1>统计</h1>
-        <span className="spacer" />
-        <Link to="/cs2">对局记录</Link>
-      </div>
-      {err && <p className="err">{err}</p>}
+      <Crumbs items={[{ label: '游戏', to: '/' }, { label: 'CS2 单挑', to: '/cs2' }, { label: '统计' }]} />
 
-      <div className="row" style={{ marginBottom: 20 }}>
-        <label className="field">
-          玩家
-          <select value={player} onChange={(e) => set('player', e.target.value)}>
-            <option value="">（选择玩家）</option>
-            {lists?.players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          对手
-          <select value={opponent} onChange={(e) => set('opponent', e.target.value)}>
-            <option value="">全部</option>
-            {lists?.players
-              .filter((p) => String(p.id) !== player)
-              .map((p) => (
+      <Card
+        title="统计"
+        actions={
+          <Link to="/cs2">
+            <button>对局记录</button>
+          </Link>
+        }
+      >
+        <div className="fields">
+          <label className="field">
+            玩家
+            <select value={player} onChange={(e) => set('player', e.target.value)}>
+              <option value="">（选择玩家）</option>
+              {lists?.players.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-          </select>
-        </label>
-      </div>
+            </select>
+          </label>
+          <label className="field">
+            对手
+            <select value={opponent} onChange={(e) => set('opponent', e.target.value)}>
+              <option value="">全部</option>
+              {lists?.players
+                .filter((p) => String(p.id) !== player)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+      </Card>
 
-      {!player && <p className="muted">选一个玩家。</p>}
+      {err && <p className="err">{err}</p>}
+      {!player && <p className="muted" style={{ marginTop: 16 }}>选一个玩家。</p>}
       {player && tables?.map((t) => <StatTableView key={t.key} table={t} />)}
     </div>
   );

@@ -1,11 +1,6 @@
 import { db } from './db.ts';
-import type { Entry, MatchDetail, MatchSummary, StatTable, Cell } from '../shared/types.ts';
-
-/**
- * 局数 = 2 × 胜方得分 − 1。
- * 单项 21:19 → 41 局；solo三项 三项总分 27:17 → 53 局。
- */
-export const roundsOf = (a: number, b: number) => 2 * Math.max(a, b) - 1;
+import { roundsOf } from '../shared/types.ts';
+import type { MatchDetail, MatchSummary, StatTable, Cell } from '../shared/types.ts';
 
 type Row = Record<string, any>;
 
