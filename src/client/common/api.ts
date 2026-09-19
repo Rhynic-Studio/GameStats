@@ -5,6 +5,7 @@ import type {
   MatchSummary,
   StatTable,
 } from '../../shared/types.ts';
+import { apiUrl } from './base.ts';
 
 async function j<T>(r: Response): Promise<T> {
   const text = await r.text();
@@ -20,7 +21,7 @@ const send = (method: string, url: string, body?: unknown) =>
     body: body === undefined ? undefined : JSON.stringify(body),
   }).then(j);
 
-const at = (game: string) => `/api/${game}`;
+const at = (game: string) => apiUrl(`api/${game}`);
 
 /* ---------------- cs2 ---------------- */
 

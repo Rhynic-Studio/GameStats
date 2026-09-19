@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { readFileSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import { db } from './db.ts';
 import * as cs2 from './cs2.ts';
 import * as crash from './crash.ts';
@@ -72,8 +74,32 @@ api.get('/crash/stats', (c) => {
 app.route('/api', api);
 
 const webRoot = process.env.WEB_ROOT ?? './dist/web';
+const indexHtml = readFileSync(join(webRoot, 'index.html'), 'utf8');
+
+/**
+ * 部署在子路径下时前端要知道前缀。X-Forwarded-Prefix 优先，其次 BASE_PATH。
+ * 两个都没有就不注入 <base>：资源本身就是相对路径，跟着地址栏走，
+ * 放在任意前缀下都能开——只有直接刷新深层链接时才需要显式配一个。
+ */
+function prefixOf(c: { req: { header: (k: string) => string | undefined } }): string | null {
+  const raw = (c.req.header('x-forwarded-prefix') ?? process.env.BASE_PATH ?? '').trim();
+  if (!raw || raw === '/') return null;
+  return (raw.startsWith('/') ? raw : `/${raw}`).replace(/\/+$/, '') + '/';
+}
+
+// 没有扩展名的路径当页面请求：返回注入了 <base> 的 index.html，
+// 这样资源、接口、前端路由都相对这个前缀解析。
+app.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  if (path.startsWith('/api') || extname(path)) {
+    await next();
+    return;
+  }
+  const prefix = prefixOf(c);
+  return c.html(prefix ? indexHtml.replace(/<head>/, `<head>\n    <base href="${prefix}">`) : indexHtml);
+});
+
 app.use('/*', serveStatic({ root: webRoot }));
-app.get('*', serveStatic({ path: `${webRoot}/index.html` }));
 
 const port = Number(process.env.PORT ?? 8787);
 db();
