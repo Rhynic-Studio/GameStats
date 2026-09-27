@@ -59,6 +59,8 @@ const addCrash = (
       initiativeSide: r.initiative,
       roleA: r.roleA ? role(r.roleA) : null,
       roleB: r.roleB ? role(r.roleB) : null,
+      rankA: null,
+      rankB: null,
       result: r.result,
       winKind: '',
     })),

@@ -94,6 +94,9 @@ export interface CrashRound {
   initiativeSide: 0 | 1 | null;
   roleA: number | null;
   roleB: number | null;
+  /** 这一小局结束时双方的等级，1-5；还没录就是 null */
+  rankA: number | null;
+  rankB: number | null;
   result: string;
   winKind: string;
 }

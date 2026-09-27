@@ -1,6 +1,17 @@
 import { db, playersWithMatches } from './db.ts';
 import { PENDING } from '../shared/crash.ts';
-import { MAX_ROUNDS, RULES, ROUND_RESULTS, WIN_BY, WIN_KINDS, isPlayed, sideOf, winnerOf } from '../shared/crash.ts';
+import {
+  MAX_RANK,
+  MAX_ROUNDS,
+  MIN_RANK,
+  ROUND_RESULTS,
+  RULES,
+  WIN_BY,
+  WIN_KINDS,
+  isPlayed,
+  sideOf,
+  winnerOf,
+} from '../shared/crash.ts';
 import type { CrashRuleset } from '../shared/types.ts';
 import type {
   CrashMatchDetail,
@@ -71,6 +82,8 @@ function loadMatches(): RawMatch[] {
       initiativeSide: r.initiative_side === null ? null : (num(r.initiative_side) as 0 | 1),
       roleA: r.role_a === null ? null : num(r.role_a),
       roleB: r.role_b === null ? null : num(r.role_b),
+      rankA: r.rank_a === null || r.rank_a === undefined ? null : num(r.rank_a),
+      rankB: r.rank_b === null || r.rank_b === undefined ? null : num(r.rank_b),
       result: String(r.result),
       winKind: String(r.win_kind ?? ''),
     });
@@ -228,13 +241,27 @@ function writeChildren(id: number, body: MatchBody, rule: CrashRuleset, firstSid
   if (body.rounds) {
     d.prepare(`DELETE FROM crash_rounds WHERE match_id = ?`).run(id);
     const ins = d.prepare(
-      `INSERT INTO crash_rounds (match_id, idx, initiative_side, role_a, role_b, result, win_kind)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO crash_rounds (match_id, idx, initiative_side, role_a, role_b, rank_a, rank_b, result, win_kind)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const r of body.rounds) {
       if (r.idx < 1 || r.idx > MAX_ROUNDS) throw new Error(`轮次超出范围（最多 ${MAX_ROUNDS} 轮）`);
       if (r.result !== PENDING && !ROUND_RESULTS.some((x) => x.key === r.result)) throw new Error(`未知结果: ${r.result}`);
-      ins.run(id, r.idx, r.initiativeSide ?? null, r.roleA ?? null, r.roleB ?? null, r.result, r.winKind ?? '');
+      for (const [who, rank] of [['A', r.rankA], ['B', r.rankB]] as const) {
+        if (rank !== null && rank !== undefined && (rank < MIN_RANK || rank > MAX_RANK))
+          throw new Error(`等级只能填 ${MIN_RANK}-${MAX_RANK}（${who} 填了 ${rank}）`);
+      }
+      ins.run(
+        id,
+        r.idx,
+        r.initiativeSide ?? null,
+        r.roleA ?? null,
+        r.roleB ?? null,
+        r.rankA ?? null,
+        r.rankB ?? null,
+        r.result,
+        r.winKind ?? '',
+      );
     }
   }
 }
@@ -312,6 +339,8 @@ interface RoundFact {
   oppRole: number;
   won: boolean;
   initiative: boolean;
+  /** 这一小局结束时自己的等级，1-5；没录就是 null */
+  myRank: number | null;
   buffState: '都无' | '我优' | '我劣' | '都有';
 }
 
@@ -409,6 +438,7 @@ function buildFacts(playerId?: number, ruleKey?: string) {
           oppRole: side === 0 ? r.roleB : r.roleA,
           won: w === side,
           initiative: r.initiativeSide === side,
+          myRank: side === 0 ? r.rankA : r.rankB,
           buffState: myBuff && oppBuff ? '都有' : myBuff ? '我优' : oppBuff ? '我劣' : '都无',
         });
       }
@@ -521,6 +551,47 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
           出现: rows.length,
         };
       }),
+    ),
+  );
+
+  /* 基础 · 等级：每小局结束时的等级，1-5 */
+  const ranked = roundFacts.filter((f) => f.myRank !== null);
+  const avgRank = (rows: RoundFact[]) =>
+    rows.length === 0 ? null : Math.round((rows.reduce((s, f) => s + (f.myRank ?? 0), 0) / rows.length) * 10) / 10;
+  out.push(
+    grid(
+      'rank',
+      '基础',
+      '等级',
+      '角色等级',
+      [
+        { key: '角色', label: '角色', kind: 'list' },
+        { key: '平均等级', label: '平均等级', kind: 'number' },
+        { key: '小局', label: '小局', kind: 'number' },
+      ],
+      roles.map((role) => {
+        const rows = ranked.filter((f) => f.myRole === role.id);
+        return { 角色: roleCell(role), 平均等级: avgRank(rows), 小局: rows.length };
+      }),
+    ),
+  );
+  out.push(
+    grid(
+      'rank',
+      '基础',
+      '等级',
+      '玩家等级',
+      [
+        { key: '玩家', label: '玩家', kind: 'list' },
+        { key: '平均等级', label: '平均等级', kind: 'number' },
+        { key: '小局', label: '小局', kind: 'number' },
+      ],
+      playersWithMatches()
+        .filter((p) => playerId === undefined || p.id === playerId)
+        .map((p) => {
+          const rows = ranked.filter((f) => f.myPlayer === p.id);
+          return { 玩家: { id: p.id, name: p.name } as Cell, 平均等级: avgRank(rows), 小局: rows.length };
+        }),
     ),
   );
 

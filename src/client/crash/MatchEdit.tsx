@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs } from '../common/Card.tsx';
 import {
+  MAX_RANK,
   MAX_ROUNDS,
+  MIN_RANK,
   PENDING,
   RULES,
   ROUND_RESULTS,
@@ -18,11 +20,15 @@ import type { CrashLists } from '../common/api.ts';
 import type { CrashRound } from '../../shared/types.ts';
 
 const other = (s: 0 | 1): 0 | 1 => (s === 0 ? 1 : 0);
+/** 等级选项，1 到 5 */
+const RANKS = Array.from({ length: MAX_RANK - MIN_RANK + 1 }, (_, i) => MIN_RANK + i);
 const emptyRound = (idx: number): CrashRound => ({
   idx,
   initiativeSide: null,
   roleA: null,
   roleB: null,
+  rankA: null,
+  rankB: null,
   result: PENDING,
   winKind: '',
 });
@@ -34,7 +40,7 @@ export default function MatchEdit() {
   const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 10));
   const [playerA, setPlayerA] = useState('');
   const [playerB, setPlayerB] = useState('');
-  const [rule, setRule] = useState('bp');
+  const [rule, setRule] = useState('bp2');
   const [firstSide, setFirstSide] = useState<0 | 1>(0);
   const [note, setNote] = useState('');
   const [pool, setPool] = useState<number[]>([]);
@@ -353,6 +359,32 @@ export default function MatchEdit() {
                         {sidePicks[side].map((rid) => (
                           <option key={rid} value={rid}>
                             {roleName(rid)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+
+                {([0, 1] as const).map((side) => (
+                  <div key={`rank${side}`} style={{ display: 'contents' }}>
+                    <span>{name(side)} 等级</span>
+                    <div>
+                      <select
+                        value={(side === 0 ? r.rankA : r.rankB) ?? ''}
+                        onChange={(e) =>
+                          setRound(
+                            r.idx,
+                            side === 0
+                              ? { rankA: e.target.value === '' ? null : Number(e.target.value) }
+                              : { rankB: e.target.value === '' ? null : Number(e.target.value) },
+                          )
+                        }
+                      >
+                        <option value="">—</option>
+                        {RANKS.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
                           </option>
                         ))}
                       </select>

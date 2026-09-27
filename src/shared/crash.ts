@@ -24,7 +24,8 @@ export const RULES: Record<string, CrashRuleset> = {
   bp2: {
     key: 'bp2',
     label: 'bp规则v2',
-    poolSize: 11,
+    // roll 出 8 个进池，八次选人正好选完，再各自 ban 掉对方一个
+    poolSize: 8,
     // 先手 1 / 后手 2 / 先手 2 / 后手 2 / 先手 1，然后各自 ban 掉对方选走的一个
     slots: [P(F), P(S), P(S), P(F), P(F), P(S), P(S), P(F), BO(F), BO(S)],
   },
@@ -46,6 +47,9 @@ export const WIN_KINDS = ['战斗胜利', '人气胜利'];
 
 export const MAX_ROUNDS = 3;
 export const WIN_BY = 2;
+/** 每小局结束时双方的等级 */
+export const MIN_RANK = 1;
+export const MAX_RANK = 5;
 
 export const winnerOf = (result: string): 0 | 1 | null =>
   ROUND_RESULTS.find((r) => r.key === result)?.winner ?? null;

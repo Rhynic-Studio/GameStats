@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS crash_rounds (
   initiative_side INTEGER,
   role_a          INTEGER REFERENCES crash_roles(id),
   role_b          INTEGER REFERENCES crash_roles(id),
+  rank_a          INTEGER,
+  rank_b          INTEGER,
   result          TEXT NOT NULL DEFAULT 'pending',
   win_kind        TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (match_id, idx)
@@ -124,6 +126,11 @@ export function db(): DatabaseSync {
   d.exec(SCHEMA);
   d.exec(CS2_SCHEMA);
   d.exec(CRASH_SCHEMA);
+
+  // CREATE TABLE IF NOT EXISTS 不会给已存在的表补字段，老的库要手动加列
+  const roundCols = (d.prepare(`PRAGMA table_info(crash_rounds)`).all() as { name: string }[]).map((c) => c.name);
+  if (!roundCols.includes('rank_a')) d.exec(`ALTER TABLE crash_rounds ADD COLUMN rank_a INTEGER`);
+  if (!roundCols.includes('rank_b')) d.exec(`ALTER TABLE crash_rounds ADD COLUMN rank_b INTEGER`);
 
   const item = d.prepare(`INSERT OR IGNORE INTO cs2_items (name, sort) VALUES (?, ?)`);
   CS2_ITEMS.forEach((n, i) => item.run(n, i + 1));

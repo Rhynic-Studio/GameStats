@@ -5,8 +5,9 @@ import { Card, TopBar } from '../common/Card.tsx';
 import { StatBoard } from '../common/StatBoard.tsx';
 import type { Player, StatTable } from '../../shared/types.ts';
 
-/** 规则之间的数值口径不一样，默认看最新的那套 */
+/** 规则之间的数值口径不一样，默认看最新的那套；选「全部」就是不过滤 */
 const DEFAULT_RULE = 'bp2';
+const ALL_RULES = 'all';
 
 export default function Stats() {
   const [players, setPlayers] = useState<Player[] | null>(null);
@@ -39,7 +40,7 @@ export default function Stats() {
 
   useEffect(() => {
     crash
-      .stats(player ? Number(player) : undefined, rule)
+      .stats(player ? Number(player) : undefined, rule === ALL_RULES ? undefined : rule)
       .then(setTables)
       .catch((e) => setErr(String(e.message ?? e)));
   }, [player, rule]);
@@ -59,6 +60,7 @@ export default function Stats() {
                     {r.label}
                   </option>
                 ))}
+                <option value={ALL_RULES}>全部</option>
               </select>
             </label>
             <label className="field">
