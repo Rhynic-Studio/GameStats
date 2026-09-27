@@ -602,20 +602,32 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
     };
   };
 
-  /** 赢 / 输的时候，rank 落在 1-5 各是多少次、占比多少。一个对象的 5 行绑成一块 */
+  /**
+   * 赢 / 输各自的 rank 落点：一个对象固定 5 行，绑成一块。
+   * 永远全部列出来，哪怕某档一次都没有。
+   */
   const breakdown = (
     title: string,
     whoKey: '角色' | '玩家',
     subjects: { id: number; name: string }[],
     idOf: (f: RoundFact) => number,
-    won: boolean,
   ) => {
     const rows: Record<string, Cell>[] = [];
     for (const s of subjects) {
-      const mine = ranked.filter((f) => idOf(f) === s.id && f.won === won);
+      const mine = ranked.filter((f) => idOf(f) === s.id);
+      const wins = mine.filter((f) => f.won);
+      const losses = mine.filter((f) => !f.won);
       for (let n = MIN_RANK; n <= MAX_RANK; n++) {
-        const hit = mine.filter((f) => f.myRank === n).length;
-        rows.push({ [whoKey]: { id: s.id, name: s.name } as Cell, rank: n, 次数: hit, 占比: rate(hit, mine.length) });
+        const w = wins.filter((f) => f.myRank === n).length;
+        const l = losses.filter((f) => f.myRank === n).length;
+        rows.push({
+          [whoKey]: { id: s.id, name: s.name } as Cell,
+          rank: n,
+          胜次数: w,
+          胜占比: rate(w, wins.length),
+          负次数: l,
+          负占比: rate(l, losses.length),
+        });
       }
     }
     return grid(
@@ -626,18 +638,18 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
       [
         { key: whoKey, label: whoKey, kind: 'list' },
         { key: 'rank', label: 'rank', kind: 'number' },
-        { key: '次数', label: '次数', kind: 'number' },
-        { key: '占比', label: '占比', kind: 'percent' },
+        { key: '胜次数', label: '胜次数', kind: 'number' },
+        { key: '胜占比', label: '胜占比', kind: 'percent' },
+        { key: '负次数', label: '负次数', kind: 'number' },
+        { key: '负占比', label: '负占比', kind: 'percent' },
       ],
       rows,
       whoKey,
     );
   };
 
-  out.push(breakdown('角色获胜时 rank', '角色', roles, (f) => f.myRole, true));
-  out.push(breakdown('角色失败时 rank', '角色', roles, (f) => f.myRole, false));
-  out.push(breakdown('玩家获胜时 rank', '玩家', playerItems, (f) => f.myPlayer, true));
-  out.push(breakdown('玩家失败时 rank', '玩家', playerItems, (f) => f.myPlayer, false));
+  out.push(breakdown('角色 rank 胜负', '角色', roles, (f) => f.myRole));
+  out.push(breakdown('玩家 rank 胜负', '玩家', playerItems, (f) => f.myPlayer));
 
   const ranks = Array.from({ length: MAX_RANK - MIN_RANK + 1 }, (_, i) => MIN_RANK + i);
 

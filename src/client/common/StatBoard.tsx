@@ -79,12 +79,20 @@ function GridView({ table }: { table: GridTable }) {
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i}>
-              {table.columns.map((c) => (
-                <td key={c.key} className={c.kind === 'list' ? '' : 'num'}>
-                  {grouped(r, i) && c.key === table.groupBy ? '' : text(r[c.key], c.kind)}
-                </td>
-              ))}
+            <tr key={i} className={table.groupBy && i > 0 && !grouped(r, i) ? 'group-start' : ''}>
+              {table.columns.map((c) => {
+                const isGroupCol = table.groupBy === c.key;
+                return (
+                  <td
+                    key={c.key}
+                    className={[c.kind === 'list' ? '' : 'num', isGroupCol ? 'group-cell' : '']
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {grouped(r, i) && isGroupCol ? '' : text(r[c.key], c.kind)}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

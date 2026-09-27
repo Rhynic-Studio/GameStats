@@ -21,6 +21,8 @@ import type { CrashLists } from '../common/api.ts';
 import type { CrashRound } from '../../shared/types.ts';
 
 const other = (s: 0 | 1): 0 | 1 => (s === 0 ? 1 : 0);
+/** rank 的档位，1 到 5 */
+const RANKS = Array.from({ length: MAX_RANK - MIN_RANK + 1 }, (_, i) => MIN_RANK + i);
 const emptyRound = (idx: number): CrashRound => ({
   idx,
   initiativeSide: null,
@@ -386,27 +388,24 @@ export default function MatchEdit() {
 
                 {([0, 1] as const).map((side) => {
                   const rid = side === 0 ? r.roleA : r.roleB;
+                  const cur = (side === 0 ? r.rankA : r.rankB) ?? null;
                   return (
                     <div key={`rank${side}`} style={{ display: 'contents' }}>
                       <span>{rid === null ? '—' : roleName(rid)} rank</span>
-                      <div>
-                        <input
-                          type="number"
-                          min={MIN_RANK}
-                          max={MAX_RANK}
-                          style={{ width: 64 }}
-                          disabled={!isPlayed(r.result)}
-                          value={(side === 0 ? r.rankA : r.rankB) ?? ''}
-                          onChange={(e) => {
-                            const t = e.target.value;
-                            const n = t === '' ? null : Number(t);
-                            const v =
-                              n === null || !Number.isFinite(n)
-                                ? null
-                                : Math.min(MAX_RANK, Math.max(MIN_RANK, Math.trunc(n)));
-                            setRound(r.idx, side === 0 ? { rankA: v } : { rankB: v });
-                          }}
-                        />
+                      <div className="rankpick">
+                        {RANKS.map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className={cur === n ? 'on' : ''}
+                            disabled={!isPlayed(r.result)}
+                            onClick={() =>
+                              setRound(r.idx, side === 0 ? { rankA: cur === n ? null : n } : { rankB: cur === n ? null : n })
+                            }
+                          >
+                            {n}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   );

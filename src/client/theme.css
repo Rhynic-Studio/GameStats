@@ -673,3 +673,46 @@ td.open {
 .drill-head button {
   margin-left: auto;
 }
+
+/* ---------- rank 选档 ---------- */
+
+/* 五个能直接点的大按钮，手机上也好按；再点一下取消 */
+.rankpick {
+  display: flex;
+  gap: 6px;
+}
+
+.rankpick button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 15px;
+  border-radius: 8px;
+}
+
+.rankpick button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.rankpick button.on:hover:not(:disabled) {
+  background: #2860d4;
+}
+
+/* ---------- 分组表 ---------- */
+
+/*
+ * 一个对象跨多行时：对象那一列垂直居中、不画行线（看上去是整块），
+ * 和后面几列之间有一条竖线，块与块之间用更明显的横线隔开。
+ * 只要表带 groupBy，不管什么表都按这套走。
+ */
+td.group-cell {
+  vertical-align: middle;
+  border-right: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+tbody tr.group-start td {
+  border-top: 1px solid #c6ccd6;
+}
