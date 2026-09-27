@@ -177,9 +177,13 @@ function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: num
                 {detail.map((row, i) => (
                   <tr key={i}>
                     <td className="sticky-col">{drill.rowLabels[i]}</td>
-                    {row.map((n, j) => (
-                      <td key={j} className="num">
-                        {n === 0 ? <span className="muted">·</span> : n}
+                    {row.map((cell, j) => (
+                      <td key={j} className="num" title={cell.n === 0 ? undefined : `${cell.n} 小局`}>
+                        {cell.rate === null ? (
+                          <span className="muted">·</span>
+                        ) : (
+                          `${(cell.rate * 100).toFixed(0)}%`
+                        )}
                       </td>
                     ))}
                   </tr>

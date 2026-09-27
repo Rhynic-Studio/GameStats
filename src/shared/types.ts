@@ -72,8 +72,8 @@ export interface MatrixTable extends TableCommon {
     label: string;
     rowLabels: string[];
     colLabels: string[];
-    /** `${rowId}:${colId}` → 小表的二维值；没样本的对子不出现 */
-    cells: Record<string, number[][]>;
+    /** `${rowId}:${colId}` → 小表：rate 是胜率（没样本就是 null），n 是小局数 */
+    cells: Record<string, { rate: number | null; n: number }[][]>;
   };
 }
 

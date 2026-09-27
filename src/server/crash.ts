@@ -670,15 +670,17 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
       if (g) g.push(f);
       else groups.set(k, [f]);
     }
-    const cells: Record<string, number[][]> = {};
+    const cells: Record<string, { rate: number | null; n: number }[][]> = {};
     for (const [k, g] of groups) {
-      // 打过就能点开。还没录 rank 就是一张全 0 的表，不是点不动
-      const grid = ranks.map(() => ranks.map(() => 0));
+      // 打过就能点开；格子给的是这一档对位的胜率，n 是背后的样本量
+      const grid = ranks.map(() => ranks.map(() => ({ w: 0, n: 0 })));
       for (const f of g) {
         if (f.myRank === null || f.oppRank === null) continue;
-        grid[f.myRank - MIN_RANK][f.oppRank - MIN_RANK] += 1;
+        const c = grid[f.myRank - MIN_RANK][f.oppRank - MIN_RANK];
+        c.n += 1;
+        if (f.won) c.w += 1;
       }
-      cells[k] = grid;
+      cells[k] = grid.map((row) => row.map((c) => ({ rate: c.n === 0 ? null : c.w / c.n, n: c.n })));
     }
     return {
       kind: 'matrix',
@@ -697,7 +699,7 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
           return g ? rate(g.filter((f) => f.won).length, g.length) : null;
         }),
       })),
-      drill: { label: 'rank 对位 · 小局次数', rowLabels: ranks.map(String), colLabels: ranks.map(String), cells },
+      drill: { label: 'rank 对位 · 胜率', rowLabels: ranks.map(String), colLabels: ranks.map(String), cells },
     };
   };
 
