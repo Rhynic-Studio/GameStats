@@ -623,10 +623,10 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
         rows.push({
           [whoKey]: { id: s.id, name: s.name } as Cell,
           rank: n,
-          胜次数: w,
-          胜占比: rate(w, wins.length),
-          负次数: l,
-          负占比: rate(l, losses.length),
+          胜利次数: w,
+          胜利占比: rate(w, wins.length),
+          失败次数: l,
+          失败占比: rate(l, losses.length),
         });
       }
     }
@@ -638,10 +638,10 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
       [
         { key: whoKey, label: whoKey, kind: 'list' },
         { key: 'rank', label: 'rank', kind: 'number' },
-        { key: '胜次数', label: '胜次数', kind: 'number' },
-        { key: '胜占比', label: '胜占比', kind: 'percent' },
-        { key: '负次数', label: '负次数', kind: 'number' },
-        { key: '负占比', label: '负占比', kind: 'percent' },
+        { key: '胜利次数', label: '胜利次数', kind: 'number' },
+        { key: '胜利占比', label: '胜利占比', kind: 'percent' },
+        { key: '失败次数', label: '失败次数', kind: 'number' },
+        { key: '失败占比', label: '失败占比', kind: 'percent' },
       ],
       rows,
       whoKey,
@@ -672,14 +672,13 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
     }
     const cells: Record<string, number[][]> = {};
     for (const [k, g] of groups) {
+      // 打过就能点开。还没录 rank 就是一张全 0 的表，不是点不动
       const grid = ranks.map(() => ranks.map(() => 0));
-      let any = false;
       for (const f of g) {
         if (f.myRank === null || f.oppRank === null) continue;
         grid[f.myRank - MIN_RANK][f.oppRank - MIN_RANK] += 1;
-        any = true;
       }
-      if (any) cells[k] = grid;
+      cells[k] = grid;
     }
     return {
       kind: 'matrix',
