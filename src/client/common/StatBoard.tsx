@@ -115,7 +115,9 @@ function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: num
         <table className="matrix">
           <thead>
             <tr>
-              <th className="plain sticky-col">{table.rowHeader}</th>
+              <th className="plain sticky-col corner">
+                {table.rowHeader} ＼ {table.colHeader}
+              </th>
               {table.cols.map((c) => (
                 <th key={c.id} className="num" style={{ color: colorOf?.(c.id) }}>
                   {c.name}
@@ -165,7 +167,9 @@ function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: num
             <table className="matrix">
               <thead>
                 <tr>
-                  <th className="plain sticky-col">{table.cols[open.c].name}</th>
+                  <th className="plain sticky-col corner">
+                    {table.rows[open.r].name} rank ＼ {table.cols[open.c].name} rank
+                  </th>
                   {drill.colLabels.map((l) => (
                     <th key={l} className="num">
                       {l}
