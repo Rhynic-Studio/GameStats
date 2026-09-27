@@ -11,7 +11,7 @@ const BO = (side: 'first' | 'second') => ({ kind: 'ban' as const, side, from: 'o
 export const RULES: Record<string, CrashRuleset> = {
   first: {
     key: 'first',
-    label: '初见模式',
+    label: '官方模式',
     poolSize: 6,
     slots: [P(F), P(S), P(S), P(F), P(F), P(S)],
   },

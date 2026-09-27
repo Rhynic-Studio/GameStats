@@ -161,13 +161,13 @@ export default function MatchView() {
                 <div className="role-name" style={{ color: roleColor(r.roleA) }}>
                   {roleName(r.roleA)}
                 </div>
-                <span>{m.playerA.name} 等级</span>
+                <span>{r.roleA === null ? '—' : roleName(r.roleA)} rank</span>
                 <div>{r.rankA ?? '—'}</div>
                 <span>{m.playerB.name} 出战</span>
                 <div className="role-name" style={{ color: roleColor(r.roleB) }}>
                   {roleName(r.roleB)}
                 </div>
-                <span>{m.playerB.name} 等级</span>
+                <span>{r.roleB === null ? '—' : roleName(r.roleB)} rank</span>
                 <div>{r.rankB ?? '—'}</div>
                 {r.idx < MAX_ROUNDS && (
                   <>

@@ -12,6 +12,7 @@ import {
   WIN_BY,
   WIN_KINDS,
   initiativeDecider,
+  isPlayed,
   resultLabel,
   sideOf,
   winnerOf,
@@ -366,35 +367,16 @@ export default function MatchEdit() {
                   </div>
                 ))}
 
-                {([0, 1] as const).map((side) => (
-                  <div key={`rank${side}`} style={{ display: 'contents' }}>
-                    <span>{name(side)} 等级</span>
-                    <div>
-                      <select
-                        value={(side === 0 ? r.rankA : r.rankB) ?? ''}
-                        onChange={(e) =>
-                          setRound(
-                            r.idx,
-                            side === 0
-                              ? { rankA: e.target.value === '' ? null : Number(e.target.value) }
-                              : { rankB: e.target.value === '' ? null : Number(e.target.value) },
-                          )
-                        }
-                      >
-                        <option value="">—</option>
-                        {RANKS.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ))}
-
                 <span>结果</span>
                 <div>
-                  <select value={r.result} onChange={(e) => setRound(r.idx, { result: e.target.value })}>
+                  <select
+                    value={r.result}
+                    onChange={(e) => {
+                      const result = e.target.value;
+                      // 只有正常打完的小局才谈得上 rank，切走就把填过的清掉
+                      setRound(r.idx, isPlayed(result) ? { result } : { result, rankA: null, rankB: null });
+                    }}
+                  >
                     <option value={PENDING}>未录</option>
                     {ROUND_RESULTS.map((x) => (
                       <option key={x.key} value={x.key}>
@@ -404,7 +386,37 @@ export default function MatchEdit() {
                   </select>
                 </div>
 
-                <span>胜利条件</span>
+                {([0, 1] as const).map((side) => {
+                  const rid = side === 0 ? r.roleA : r.roleB;
+                  return (
+                    <div key={`rank${side}`} style={{ display: 'contents' }}>
+                      <span>{rid === null ? '—' : roleName(rid)} rank</span>
+                      <div>
+                        <select
+                          disabled={!isPlayed(r.result)}
+                          value={(side === 0 ? r.rankA : r.rankB) ?? ''}
+                          onChange={(e) =>
+                            setRound(
+                              r.idx,
+                              side === 0
+                                ? { rankA: e.target.value === '' ? null : Number(e.target.value) }
+                                : { rankB: e.target.value === '' ? null : Number(e.target.value) },
+                            )
+                          }
+                        >
+                          <option value="">—</option>
+                          {RANKS.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <span>胜利方式</span>
                 <div>
                   <select
                     value={r.winKind}

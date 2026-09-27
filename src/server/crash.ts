@@ -339,8 +339,9 @@ interface RoundFact {
   oppRole: number;
   won: boolean;
   initiative: boolean;
-  /** 这一小局结束时自己的等级，1-5；没录就是 null */
+  /** 这一小局结束时双方的 rank，1-5；没录就是 null */
   myRank: number | null;
+  oppRank: number | null;
   buffState: '都无' | '我优' | '我劣' | '都有';
 }
 
@@ -439,6 +440,7 @@ function buildFacts(playerId?: number, ruleKey?: string) {
           won: w === side,
           initiative: r.initiativeSide === side,
           myRank: side === 0 ? r.rankA : r.rankB,
+          oppRank: side === 0 ? r.rankB : r.rankA,
           buffState: myBuff && oppBuff ? '都有' : myBuff ? '我优' : oppBuff ? '我劣' : '都无',
         });
       }
@@ -554,46 +556,125 @@ export function stats(playerId?: number, rule?: string): StatTable[] {
     ),
   );
 
-  /* 基础 · 等级：每小局结束时的等级，1-5 */
+  /* 基础 · rank：每小局结束时双方的 rank，1-5 */
   const ranked = roundFacts.filter((f) => f.myRank !== null);
-  const avgRank = (rows: RoundFact[]) =>
-    rows.length === 0 ? null : Math.round((rows.reduce((s, f) => s + (f.myRank ?? 0), 0) / rows.length) * 10) / 10;
-  out.push(
-    grid(
+  const players = playersWithMatches();
+  const playerItems = players
+    .filter((p) => playerId === undefined || p.id === playerId)
+    .map((p) => ({ id: p.id, name: p.name }));
+
+  const mean = (rows: RoundFact[], pick: (f: RoundFact) => number | null) => {
+    const xs = rows.map(pick).filter((n): n is number => n !== null);
+    return xs.length === 0 ? null : Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10;
+  };
+
+  /** 赢 / 输的时候，rank 落在 1-5 各是多少次、占比多少 */
+  const breakdown = (
+    title: string,
+    whoKey: '角色' | '玩家',
+    subjects: { id: number; name: string }[],
+    idOf: (f: RoundFact) => number,
+    won: boolean,
+  ) => {
+    const rows: Record<string, Cell>[] = [];
+    for (const s of subjects) {
+      const mine = ranked.filter((f) => idOf(f) === s.id && f.won === won);
+      if (mine.length === 0) continue;
+      for (let n = MIN_RANK; n <= MAX_RANK; n++) {
+        const hit = mine.filter((f) => f.myRank === n).length;
+        rows.push({ [whoKey]: { id: s.id, name: s.name } as Cell, rank: n, 次数: hit, 占比: rate(hit, mine.length) });
+      }
+    }
+    return grid(
       'rank',
       '基础',
-      '等级',
-      '角色等级',
-      [
-        { key: '角色', label: '角色', kind: 'list' },
-        { key: '平均等级', label: '平均等级', kind: 'number' },
-        { key: '小局', label: '小局', kind: 'number' },
-      ],
-      roles.map((role) => {
-        const rows = ranked.filter((f) => f.myRole === role.id);
-        return { 角色: roleCell(role), 平均等级: avgRank(rows), 小局: rows.length };
-      }),
-    ),
-  );
-  out.push(
-    grid(
       'rank',
-      '基础',
-      '等级',
-      '玩家等级',
+      title,
       [
-        { key: '玩家', label: '玩家', kind: 'list' },
-        { key: '平均等级', label: '平均等级', kind: 'number' },
-        { key: '小局', label: '小局', kind: 'number' },
+        { key: whoKey, label: whoKey, kind: 'list' },
+        { key: 'rank', label: 'rank', kind: 'number' },
+        { key: '次数', label: '次数', kind: 'number' },
+        { key: '占比', label: '占比', kind: 'percent' },
       ],
-      playersWithMatches()
-        .filter((p) => playerId === undefined || p.id === playerId)
-        .map((p) => {
-          const rows = ranked.filter((f) => f.myPlayer === p.id);
-          return { 玩家: { id: p.id, name: p.name } as Cell, 平均等级: avgRank(rows), 小局: rows.length };
+      rows,
+    );
+  };
+
+  out.push(breakdown('角色获胜时 rank', '角色', roles, (f) => f.myRole, true));
+  out.push(breakdown('角色失败时 rank', '角色', roles, (f) => f.myRole, false));
+  out.push(breakdown('玩家获胜时 rank', '玩家', playerItems, (f) => f.myPlayer, true));
+  out.push(breakdown('玩家失败时 rank', '玩家', playerItems, (f) => f.myPlayer, false));
+
+  /** 对位矩阵：行、列都从 fact 里取，值由 value() 决定 */
+  const pairMatrix = (
+    title: string,
+    rowHeader: string,
+    colHeader: string,
+    rowItems: { id: number; name: string; short?: string }[],
+    colItems: { id: number; name: string; short?: string }[],
+    rowOf: (f: RoundFact) => number,
+    colOf: (f: RoundFact) => number,
+    value: (rows: RoundFact[]) => number | null,
+  ): MatrixTable => {
+    const groups = new Map<string, RoundFact[]>();
+    for (const f of ranked) {
+      const k = `${rowOf(f)}:${colOf(f)}`;
+      const g = groups.get(k);
+      if (g) g.push(f);
+      else groups.set(k, [f]);
+    }
+    return {
+      kind: 'matrix',
+      navKey: 'rank',
+      navGroup: '基础',
+      navLabel: 'rank',
+      title,
+      rowHeader,
+      colHeader,
+      cols: colItems.map((c) => ({ id: c.id, name: c.short ?? c.name })),
+      rows: rowItems.map((r) => ({
+        id: r.id,
+        name: r.short ?? r.name,
+        cells: colItems.map((c) => {
+          const g = groups.get(`${r.id}:${c.id}`);
+          return g ? value(g) : null;
         }),
-    ),
-  );
+      })),
+    };
+  };
+
+  // 对位的三个维度：我这边的 rank、对手那边的 rank、以及两者的差
+  const dims: { label: string; value: (rows: RoundFact[]) => number | null }[] = [
+    { label: '我方 rank', value: (g) => mean(g, (f) => f.myRank) },
+    { label: '对方 rank', value: (g) => mean(g, (f) => f.oppRank) },
+    {
+      label: 'rank 差',
+      value: (g) => {
+        const a = mean(g, (f) => f.myRank);
+        const b = mean(g, (f) => f.oppRank);
+        return a === null || b === null ? null : Math.round((a - b) * 10) / 10;
+      },
+    },
+  ];
+  for (const d of dims) {
+    out.push(
+      pairMatrix(`角色对位 · ${d.label}`, '角色', '对手角色', roles, roles, (f) => f.myRole, (f) => f.oppRole, d.value),
+    );
+  }
+  for (const d of dims) {
+    out.push(
+      pairMatrix(
+        `玩家对位 · ${d.label}`,
+        '玩家',
+        '对手玩家',
+        playerItems,
+        players,
+        (f) => f.myPlayer,
+        (f) => f.oppPlayer,
+        d.value,
+      ),
+    );
+  }
 
   /* 基础 · 角色总胜率（不看 buff）+ 矩阵 */
   out.push(
