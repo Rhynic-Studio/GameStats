@@ -11,12 +11,44 @@ function GridView({ table }: { table: GridTable }) {
 
   const rows = useMemo(() => {
     const rank = (c: Cell | undefined) => (typeof c === 'number' ? c : c === null || c === undefined ? -1 : c.id);
-    return [...table.rows].sort((x, y) => {
+    const cmp = (x: Record<string, Cell>, y: Record<string, Cell>) => {
       const a = rank(x[sortKey]);
       const b = rank(y[sortKey]);
       return desc ? b - a : a - b;
-    });
+    };
+    const source = table.rows;
+    if (!table.groupBy) return [...source].sort(cmp);
+
+    // 分组的表：同一块的行是一个整体。
+    // 按分组列排 → 整块一起动；按别的列排 → 只调整块内顺序，块之间不动。
+    const key = (r: Record<string, Cell>) => {
+      const c = r[table.groupBy as string];
+      return c !== null && typeof c === 'object' ? String(c.id) : String(c);
+    };
+    const blocks = new Map<string, Record<string, Cell>[]>();
+    for (const r of source) {
+      const k = key(r);
+      const g = blocks.get(k);
+      if (g) g.push(r);
+      else blocks.set(k, [r]);
+    }
+    const list = [...blocks.values()];
+    if (sortKey === table.groupBy) {
+      list.sort((x, y) => cmp(x[0], y[0]));
+      return list.flat();
+    }
+    for (const g of list) g.sort(cmp);
+    return list.flat();
   }, [table, sortKey, desc]);
+
+  // 分组列只在每块第一行写名字，其余留空
+  const grouped = (r: Record<string, Cell>, i: number) => {
+    if (!table.groupBy || i === 0) return false;
+    const prev = rows[i - 1][table.groupBy as string];
+    const cur = r[table.groupBy as string];
+    const id = (c: Cell | undefined) => (c !== null && typeof c === 'object' ? c.id : c);
+    return id(prev) === id(cur);
+  };
 
   const click = (key: string) => {
     if (key === sortKey) setDesc(!desc);
@@ -50,7 +82,7 @@ function GridView({ table }: { table: GridTable }) {
             <tr key={i}>
               {table.columns.map((c) => (
                 <td key={c.key} className={c.kind === 'list' ? '' : 'num'}>
-                  {text(r[c.key], c.kind)}
+                  {grouped(r, i) && c.key === table.groupBy ? '' : text(r[c.key], c.kind)}
                 </td>
               ))}
             </tr>
@@ -64,6 +96,11 @@ function GridView({ table }: { table: GridTable }) {
 /* ---------------- 矩阵 ---------------- */
 
 function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: number) => string | undefined }) {
+  const [open, setOpen] = useState<{ r: number; c: number } | null>(null);
+  const drill = table.drill;
+  const key = open === null ? '' : `${table.rows[open.r].id}:${table.cols[open.c].id}`;
+  const detail = drill && open !== null ? drill.cells[key] : undefined;
+
   return (
     <Card title={table.title} flush>
       <div className="scroll-x">
@@ -79,21 +116,71 @@ function MatrixView({ table, colorOf }: { table: MatrixTable; colorOf?: (id: num
             </tr>
           </thead>
           <tbody>
-            {table.rows.map((r) => (
+            {table.rows.map((r, ri) => (
               <tr key={r.id}>
                 <td className="sticky-col" style={{ color: colorOf?.(r.id) }}>
                   {r.name}
                 </td>
-                {r.cells.map((v, i) => (
-                  <td key={i} className="num">
-                    {v === null ? <span className="muted">—</span> : `${(v * 100).toFixed(0)}%`}
-                  </td>
-                ))}
+                {r.cells.map((v, ci) => {
+                  const canOpen = drill !== undefined && drill.cells[`${r.id}:${table.cols[ci].id}`] !== undefined;
+                  const here = open?.r === ri && open?.c === ci;
+                  return (
+                    <td
+                      key={ci}
+                      className={`num${canOpen ? ' drillable' : ''}${here ? ' open' : ''}`}
+                      onClick={canOpen ? () => setOpen(here ? null : { r: ri, c: ci }) : undefined}
+                    >
+                      {v === null ? <span className="muted">—</span> : `${(v * 100).toFixed(0)}%`}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {drill && open !== null && (
+        <div className="drill">
+          <div className="drill-head">
+            <b>
+              {table.rows[open.r].name} × {table.cols[open.c].name}
+            </b>
+            <span className="muted small">{drill.label}</span>
+            <button className="quiet" onClick={() => setOpen(null)}>
+              收起
+            </button>
+          </div>
+          {detail === undefined ? (
+            <p className="muted small">这两个没打过。</p>
+          ) : (
+            <table className="matrix">
+              <thead>
+                <tr>
+                  <th className="plain sticky-col">{table.cols[open.c].name}</th>
+                  {drill.colLabels.map((l) => (
+                    <th key={l} className="num">
+                      {l}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {detail.map((row, i) => (
+                  <tr key={i}>
+                    <td className="sticky-col">{drill.rowLabels[i]}</td>
+                    {row.map((n, j) => (
+                      <td key={j} className="num">
+                        {n === 0 ? <span className="muted">·</span> : n}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

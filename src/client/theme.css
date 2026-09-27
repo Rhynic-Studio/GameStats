@@ -643,3 +643,33 @@ button.danger-solid {
 button.danger-solid:hover:not(:disabled) {
   background: #9a1e14;
 }
+
+/* 能点开的矩阵格子：点一下在下面展开这一对的明细 */
+td.drillable {
+  cursor: pointer;
+}
+
+td.drillable:hover {
+  background: #eef1f5;
+}
+
+td.open {
+  background: #e6edfb;
+  font-weight: 500;
+}
+
+.drill {
+  border-top: 1px solid var(--line);
+  padding: 12px 16px 4px;
+}
+
+.drill-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.drill-head button {
+  margin-left: auto;
+}

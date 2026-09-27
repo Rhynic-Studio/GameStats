@@ -57,6 +57,8 @@ export interface GridTable extends TableCommon {
   kind: 'grid';
   columns: { key: string; label: string; kind: 'list' | 'number' | 'percent' }[];
   rows: Record<string, Cell>[];
+  /** 这一列是分组列：同一个值的行是一整块，排序时整块动 */
+  groupBy?: string;
 }
 
 export interface MatrixTable extends TableCommon {
@@ -65,6 +67,14 @@ export interface MatrixTable extends TableCommon {
   colHeader: string;
   cols: { id: number; name: string }[];
   rows: { id: number; name: string; cells: (number | null)[] }[];
+  /** 有的话点格子能展开：每个 (行,列) 对应一张小表 */
+  drill?: {
+    label: string;
+    rowLabels: string[];
+    colLabels: string[];
+    /** `${rowId}:${colId}` → 小表的二维值；没样本的对子不出现 */
+    cells: Record<string, number[][]>;
+  };
 }
 
 export type StatTable = GridTable | MatrixTable;

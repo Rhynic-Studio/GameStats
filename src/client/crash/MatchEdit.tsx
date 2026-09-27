@@ -21,8 +21,6 @@ import type { CrashLists } from '../common/api.ts';
 import type { CrashRound } from '../../shared/types.ts';
 
 const other = (s: 0 | 1): 0 | 1 => (s === 0 ? 1 : 0);
-/** 等级选项，1 到 5 */
-const RANKS = Array.from({ length: MAX_RANK - MIN_RANK + 1 }, (_, i) => MIN_RANK + i);
 const emptyRound = (idx: number): CrashRound => ({
   idx,
   initiativeSide: null,
@@ -392,25 +390,23 @@ export default function MatchEdit() {
                     <div key={`rank${side}`} style={{ display: 'contents' }}>
                       <span>{rid === null ? '—' : roleName(rid)} rank</span>
                       <div>
-                        <select
+                        <input
+                          type="number"
+                          min={MIN_RANK}
+                          max={MAX_RANK}
+                          style={{ width: 64 }}
                           disabled={!isPlayed(r.result)}
                           value={(side === 0 ? r.rankA : r.rankB) ?? ''}
-                          onChange={(e) =>
-                            setRound(
-                              r.idx,
-                              side === 0
-                                ? { rankA: e.target.value === '' ? null : Number(e.target.value) }
-                                : { rankB: e.target.value === '' ? null : Number(e.target.value) },
-                            )
-                          }
-                        >
-                          <option value="">—</option>
-                          {RANKS.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(e) => {
+                            const t = e.target.value;
+                            const n = t === '' ? null : Number(t);
+                            const v =
+                              n === null || !Number.isFinite(n)
+                                ? null
+                                : Math.min(MAX_RANK, Math.max(MIN_RANK, Math.trunc(n)));
+                            setRound(r.idx, side === 0 ? { rankA: v } : { rankB: v });
+                          }}
+                        />
                       </div>
                     </div>
                   );
