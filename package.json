@@ -1,7 +1,7 @@
 {
   "name": "game-stats",
   "private": true,
-  "version": "0.2.6",
+  "version": "0.2.7",
   "type": "module",
   "description": "多游戏对战数据统计站（内网人工录入）",
   "scripts": {
@@ -12,6 +12,7 @@
     "start": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
+    "trim-lock": "node scripts/trim-lock.mjs",
     "build:server": "esbuild src/server/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/server.mjs"
   },
   "dependencies": {

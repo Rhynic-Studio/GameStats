@@ -48,18 +48,31 @@ nix-prefetch-url --unpack https://github.com/<owner>/<repo>/archive/refs/tags/vX
 nix hash convert --hash-algo sha256 --from nix32 --to sri <base32>
 ```
 
-**2. npm 依赖树里带着所有平台的可选二进制。**
+**2. 「拉 android 包」不是网络差，是抓取器不看平台。**
 
-esbuild / rolldown / tailwind oxide 都有，typescript 7 更是带 20 个。
-`npmInstallFlags = [ "--os=…" "--cpu=…" ]` 只让**最终产物**里剩本平台的，
-**下载阶段照样拉全套**，任何一条断流都会失败：
+nix 抓 npm 依赖用的是 `pkgs/build-support/node/prefetch-npm-deps/src/main.rs`，一个 Rust 程序。
+它遍历 lockfile 里 `packages` 的每一项逐个下载，**`os` / `cpu` 一个都不检查**
+（那两个字段只是被保留下来，留给后面的 npm 自己过滤）。lock 里有 76 个平台二进制包，
+它就老老实实下 76 个，其中 67 个本机永远用不上 —— android / darwin / riscv64 / loong64 …
+每多一个，构建就多一次「一条连接抖动、整个失败」的机会：
 
 ```
-couldn't fetch node_modules/@rolldown/binding-linux-arm-gnueabihf …
+couldn't fetch node_modules/@esbuild/android-x64 …
 Caused by: [92] Stream error in the HTTP/2 framing layer
 ```
 
-这是偶发的，**重跑一次通常就过**。别误判成哈希问题，也别声称已经根治。
+**`npmInstallFlags = [ "--os=…" "--cpu=…" ]` 治不了这个** —— 那个参数只有 `buildNpmPackage`
+（构建那一步）读，抓取那一步是另一个程序，读不到。产物树确实会瘦下去，下载量一点没少。
+之前就是被这个假象骗了。
+
+**真正的修法是把这些包从 `package-lock.json` 里删掉**：`npm run trim-lock`
+（`scripts/trim-lock.mjs`）。不能只删条目 —— 父包的 `optionalDependencies` 里还留着引用，
+npm ci 会报 `Missing: xxx from lock file`，得连引用一起清。删完 76 个只剩 9 个，全是 linux-x64。
+
+**跑过 `npm install` 之后要重新跑一次 `npm run trim-lock`**，npm 会重新生成完整 lock。
+
+代价：lockfile 从此是 linux-x64 专用的。换平台构建得先重新生成 lock。
+这个包只在 x86_64-linux 上构建，可以接受。
 
 ## 本机环境（这些坑是实际踩出来的，别绕开）
 
