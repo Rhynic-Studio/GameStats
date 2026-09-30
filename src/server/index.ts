@@ -14,23 +14,25 @@ const api = new Hono();
 api.onError((err, c) => c.json({ error: err instanceof Error ? err.message : String(err) }, 400));
 
 /**
- * 服务哪些游戏，由 GAMES 环境变量给（逗号分隔的 slug）。不设就是全都服务。
- * 关掉一个游戏只是不注册它的接口、不在首页列出来 —— 库里的表和数据一律不动，
- * 重新启用就全回来了。
+ * 服务哪些游戏，由 GAMES 环境变量给（逗号分隔的 slug）。
+ *
+ * **不设这个变量 = 全都服务；设成空串 = 一个都不服务。** 两者不一样：
+ * 前者是「没意见」，后者是明确要求全关（nix 那边 enableGames = [] 就是这种）。
  */
 function parseGames(raw: string | undefined): string[] {
   const all: string[] = ALL_GAMES.map((g) => g.slug);
-  const want = (raw ?? '')
+  if (raw === undefined) return all;
+
+  const want = raw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (want.length === 0) return all;
-
   const unknown = want.filter((s) => !all.includes(s));
   if (unknown.length > 0) {
     throw new Error(`GAMES 里有不认识的游戏：${unknown.join('、')}（只有 ${all.join('、')}）`);
   }
-  return all.filter((s) => want.includes(s));
+  // 按配置里给的顺序返回，首页卡片的顺序就跟着它走
+  return want;
 }
 
 const ENABLED = parseGames(process.env.GAMES);
@@ -189,5 +191,6 @@ app.use(
 const port = Number(process.env.PORT ?? 8787);
 db();
 serve({ fetch: app.fetch, port, hostname: process.env.HOST }, (info) => {
-  console.log(`http://127.0.0.1:${info.port}`);
+  // 把启用了哪些游戏也打出来 —— 配成空列表时站点是空的，日志里得看得出来
+  console.log(`http://127.0.0.1:${info.port}  games: ${ENABLED.join(',') || '(none)'}`);
 });
