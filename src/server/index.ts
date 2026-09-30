@@ -6,75 +6,106 @@ import { extname, join } from 'node:path';
 import { db } from './db.ts';
 import * as cs2 from './cs2.ts';
 import * as crash from './crash.ts';
+import { ALL_GAMES } from '../shared/games.ts';
 
 const app = new Hono();
 const api = new Hono();
 
 api.onError((err, c) => c.json({ error: err instanceof Error ? err.message : String(err) }, 400));
 
-const GAMES = [
-  { slug: 'cs2', name: 'CS2 单挑' },
-  { slug: 'crash', name: 'Crash' },
-];
+/**
+ * 服务哪些游戏，由 GAMES 环境变量给（逗号分隔的 slug）。不设就是全都服务。
+ * 关掉一个游戏只是不注册它的接口、不在首页列出来 —— 库里的表和数据一律不动，
+ * 重新启用就全回来了。
+ */
+function parseGames(raw: string | undefined): string[] {
+  const all: string[] = ALL_GAMES.map((g) => g.slug);
+  const want = (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (want.length === 0) return all;
 
-api.get('/games', (c) => c.json(GAMES));
+  const unknown = want.filter((s) => !all.includes(s));
+  if (unknown.length > 0) {
+    throw new Error(`GAMES 里有不认识的游戏：${unknown.join('、')}（只有 ${all.join('、')}）`);
+  }
+  return all.filter((s) => want.includes(s));
+}
+
+const ENABLED = parseGames(process.env.GAMES);
+const on = (slug: string) => ENABLED.includes(slug);
+
+/**
+ * 已知的游戏**全部**都要认。前缀推断（prefixOf）靠它判断路径里哪一段是游戏，
+ * 被禁用的 slug 也必须算数 —— 否则挂在子路径下时前缀会被多算一段。
+ */
+const KNOWN_SLUGS: string[] = ALL_GAMES.map((g) => g.slug);
+
+api.get('/games', (c) => c.json(ALL_GAMES.filter((g) => on(g.slug))));
 
 /* ---------------- cs2 ---------------- */
 
-api.get('/cs2/lists', (c) => c.json(cs2.lists()));
-api.get('/cs2/matches', (c) => c.json(cs2.listMatches()));
-api.get('/cs2/matches/:id', (c) => {
-  const m = cs2.getMatch(Number(c.req.param('id')));
-  if (!m) return c.json({ error: '对局不存在' }, 404);
-  return c.json(m);
-});
-api.post('/cs2/matches', async (c) => c.json({ id: cs2.createMatch(await c.req.json()) }));
-api.put('/cs2/matches/:id', async (c) => {
-  cs2.updateMatch(Number(c.req.param('id')), await c.req.json());
-  return c.json({ ok: true });
-});
-api.delete('/cs2/matches/:id', (c) => {
-  cs2.deleteMatch(Number(c.req.param('id')));
-  return c.json({ ok: true });
-});
-api.post('/cs2/players', async (c) => {
-  const { name } = await c.req.json<{ name: string }>();
-  cs2.ensurePlayer(name);
-  return c.json(cs2.lists());
-});
-api.get('/cs2/stats', (c) => {
-  const p = c.req.query('player');
-  const o = c.req.query('opponent');
-  return c.json(cs2.stats(p ? Number(p) : undefined, o ? Number(o) : undefined));
-});
+if (on('cs2')) {
+  api.get('/cs2/lists', (c) => c.json(cs2.lists()));
+  api.get('/cs2/matches', (c) => c.json(cs2.listMatches()));
+  api.get('/cs2/matches/:id', (c) => {
+    const m = cs2.getMatch(Number(c.req.param('id')));
+    if (!m) return c.json({ error: '对局不存在' }, 404);
+    return c.json(m);
+  });
+  api.post('/cs2/matches', async (c) => c.json({ id: cs2.createMatch(await c.req.json()) }));
+  api.put('/cs2/matches/:id', async (c) => {
+    cs2.updateMatch(Number(c.req.param('id')), await c.req.json());
+    return c.json({ ok: true });
+  });
+  api.delete('/cs2/matches/:id', (c) => {
+    cs2.deleteMatch(Number(c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  api.post('/cs2/players', async (c) => {
+    const { name } = await c.req.json<{ name: string }>();
+    cs2.ensurePlayer(name);
+    return c.json(cs2.lists());
+  });
+  api.get('/cs2/stats', (c) => {
+    const p = c.req.query('player');
+    const o = c.req.query('opponent');
+    return c.json(cs2.stats(p ? Number(p) : undefined, o ? Number(o) : undefined));
+  });
+
+}
 
 /* ---------------- crash ---------------- */
 
-api.get('/crash/lists', (c) => c.json(crash.lists()));
-api.get('/crash/matches', (c) => c.json(crash.listMatches()));
-api.get('/crash/matches/:id', (c) => {
-  const m = crash.getMatch(Number(c.req.param('id')));
-  if (!m) return c.json({ error: '对局不存在' }, 404);
-  return c.json(m);
-});
-api.post('/crash/matches', async (c) => c.json({ id: crash.createMatch(await c.req.json()) }));
-api.put('/crash/matches/:id', async (c) => {
-  crash.updateMatch(Number(c.req.param('id')), await c.req.json());
-  return c.json({ ok: true });
-});
-api.delete('/crash/matches/:id', (c) => {
-  crash.deleteMatch(Number(c.req.param('id')));
-  return c.json({ ok: true });
-});
-api.post('/crash/players', async (c) => {
-  const { name } = await c.req.json<{ name: string }>();
-  crash.ensurePlayer(name);
-  return c.json(crash.lists());
-});
-api.get('/crash/stats', (c) => {
-  const p = c.req.query('player');
-  return c.json(crash.stats(p ? Number(p) : undefined, c.req.query('rule') || undefined));
-});
+if (on('crash')) {
+  api.get('/crash/lists', (c) => c.json(crash.lists()));
+  api.get('/crash/matches', (c) => c.json(crash.listMatches()));
+  api.get('/crash/matches/:id', (c) => {
+    const m = crash.getMatch(Number(c.req.param('id')));
+    if (!m) return c.json({ error: '对局不存在' }, 404);
+    return c.json(m);
+  });
+  api.post('/crash/matches', async (c) => c.json({ id: crash.createMatch(await c.req.json()) }));
+  api.put('/crash/matches/:id', async (c) => {
+    crash.updateMatch(Number(c.req.param('id')), await c.req.json());
+    return c.json({ ok: true });
+  });
+  api.delete('/crash/matches/:id', (c) => {
+    crash.deleteMatch(Number(c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  api.post('/crash/players', async (c) => {
+    const { name } = await c.req.json<{ name: string }>();
+    crash.ensurePlayer(name);
+    return c.json(crash.lists());
+  });
+  api.get('/crash/stats', (c) => {
+    const p = c.req.query('player');
+    return c.json(crash.stats(p ? Number(p) : undefined, c.req.query('rule') || undefined));
+  });
+
+}
 
 app.route('/api', api);
 
@@ -102,7 +133,7 @@ function prefixOf(c: { req: { header: (k: string) => string | undefined; url: st
   }
 
   const segments = new URL(c.req.url).pathname.split('/').filter(Boolean);
-  const at = segments.findIndex((s) => GAMES.some((g) => g.slug === s));
+  const at = segments.findIndex((s) => KNOWN_SLUGS.includes(s));
   const before = at === -1 ? segments : segments.slice(0, at);
   if (before.length > 0) return `/${before.join('/')}/`;
   if (at !== -1) return '/';
@@ -133,7 +164,13 @@ app.use('*', async (c, next) => {
     await next();
     return;
   }
-  return c.html(indexHtml().replace(/<head>/, `<head>\n    <base href="${prefixOf(c)}">`));
+  // 顺便把「启用了哪些游戏」也写进去：前端一上来就知道该渲染哪些路由，
+  // 不用再问一次接口，也就不会先闪一下空白。
+  return c.html(
+    indexHtml()
+      .replace(/<head>/, `<head>\n    <base href="${prefixOf(c)}">`)
+      .replace('</head>', `    <script>window.__GAMES__ = ${JSON.stringify(ENABLED)}</script>\n  </head>`),
+  );
 });
 
 // 直接刷新深层链接（/前缀/crash）时，页面里的相对资源会被解析成
