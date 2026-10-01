@@ -59,7 +59,7 @@ export default function MatchList() {
                   <td className="num muted small">
                     {m.poolCount} / {m.draftCount}
                   </td>
-                  <td className="muted small">{m.note}</td>
+                  <td className="muted small note">{m.note}</td>
                 </tr>
               ))}
             </tbody>

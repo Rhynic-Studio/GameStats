@@ -48,6 +48,42 @@ h1 {
   margin-bottom: 14px;
 }
 
+/* 面包屑和右边那个身份控件同占一行：每个页面顶上都有，所以登录在哪儿都能点 */
+.topline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.topline .crumbs {
+  margin-bottom: 0;
+}
+
+.topline > .me,
+.home .topline > .me {
+  margin-left: auto;
+}
+
+.me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.me .who {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+}
+
+.me input {
+  width: 130px;
+}
+
 .crumbs a {
   color: var(--muted);
 }
@@ -115,9 +151,9 @@ td {
   border-bottom: 1px solid var(--line);
 }
 
-/* 名称列（角色 / 玩家）不折行 —— 数字列宽是固定的，挤不着它 */
+/* 名称列（角色 / 玩家）不折行 —— 数字列宽是固定的，挤不着它。备注列例外，它要能折 */
 th:not(.num),
-td:not(.num) {
+td:not(.num):not(.note) {
   white-space: nowrap;
 }
 
@@ -166,7 +202,8 @@ textarea {
 }
 
 input,
-select {
+select,
+textarea {
   padding: 5px 8px;
   border: 1px solid #d0d5dd;
   border-radius: 6px;
@@ -175,10 +212,20 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid #c3d6fb;
   outline-offset: -1px;
   border-color: var(--accent);
+}
+
+/* 起手就有几行高的文本域：高度由脚本按内容给，长到上限就在框里滚 */
+textarea.grow {
+  width: 560px;
+  max-width: 100%;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
 }
 
 input[type='number'] {
@@ -187,7 +234,8 @@ input[type='number'] {
 }
 
 input:disabled,
-select:disabled {
+select:disabled,
+textarea:disabled {
   background: #f6f7f8;
   color: var(--muted);
 }
@@ -253,6 +301,11 @@ label.field {
 
 .small {
   font-size: 12px;
+}
+
+/* 备注里换的行，显示时照原样换 */
+.note {
+  white-space: pre-wrap;
 }
 
 .err {
@@ -715,4 +768,127 @@ td.group-cell {
 
 tbody tr.group-start td {
   border-top: 1px solid #c6ccd6;
+}
+
+/* ---------- 评论 ---------- */
+
+.comments {
+  margin-bottom: 4px;
+}
+
+.cmt {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.comments > .cmt:first-child,
+.cmt-replies > .cmt:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.cmt-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.cmt-user {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cmt-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cmt-body {
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.cmt-body code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f1f3f6;
+  font-size: 13px;
+}
+
+.cmt-body a {
+  color: var(--accent);
+}
+
+/* 每条右边那几个字：平时是灰的，指上去才亮 */
+.cmt-act,
+.cmt-head .confirm button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.cmt-act:hover:not(:disabled) {
+  color: var(--accent);
+  background: none;
+}
+
+.cmt-act.danger:hover:not(:disabled) {
+  color: #b42318;
+}
+
+.cmt-head .confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+/* 就地问一句「确定删掉？」，别摆出两个大按钮来 */
+.cmt-head .confirm button.danger-solid {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.cmt-replies {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+}
+
+.cmt-form {
+  margin-top: 8px;
+}
+
+.cmt-form textarea.grow,
+.cmt-compose textarea.grow {
+  width: 100%;
+}
+
+.cmt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.cmt-as {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.comments + .cmt-compose {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.cmt-compose {
+  display: flex;
+  flex-direction: column;
 }

@@ -105,7 +105,7 @@ export default function MatchList() {
                     )}
                   </td>
                   <td className="num">{m.rounds}</td>
-                  <td className="muted small">{m.note}</td>
+                  <td className="muted small note">{m.note}</td>
                 </tr>
               ))}
             </tbody>

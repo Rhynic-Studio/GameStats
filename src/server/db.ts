@@ -95,6 +95,27 @@ CREATE TABLE IF NOT EXISTS players (
   aliases TEXT NOT NULL DEFAULT ''
 );
 
+-- 站点自己的一些零碎状态（目前只放签名 cookie 用的密钥）
+CREATE TABLE IF NOT EXISTS site_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- 评论：不存玩家 id，存的是登录时自己写的那个名字 —— 那本来就是自称，不是账号。
+-- parent_id 指向被回复的那条，顶层评论是 NULL；删掉一条时它的回复会接到上一层去。
+CREATE TABLE IF NOT EXISTS comments (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  game       TEXT NOT NULL,
+  match_id   INTEGER NOT NULL,
+  parent_id  INTEGER REFERENCES comments(id),
+  user       TEXT NOT NULL,
+  body       TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  edited_at  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_match ON comments(game, match_id);
+
 `;
 
 const CS2_ITEMS = ['手枪', '长枪', '狙击'];
@@ -131,6 +152,9 @@ export function db(): DatabaseSync {
   const roundCols = (d.prepare(`PRAGMA table_info(crash_rounds)`).all() as { name: string }[]).map((c) => c.name);
   if (!roundCols.includes('rank_a')) d.exec(`ALTER TABLE crash_rounds ADD COLUMN rank_a INTEGER`);
   if (!roundCols.includes('rank_b')) d.exec(`ALTER TABLE crash_rounds ADD COLUMN rank_b INTEGER`);
+
+  const commentCols = (d.prepare(`PRAGMA table_info(comments)`).all() as { name: string }[]).map((c) => c.name);
+  if (!commentCols.includes('parent_id')) d.exec(`ALTER TABLE comments ADD COLUMN parent_id INTEGER`);
 
   const item = d.prepare(`INSERT OR IGNORE INTO cs2_items (name, sort) VALUES (?, ?)`);
   CS2_ITEMS.forEach((n, i) => item.run(n, i + 1));

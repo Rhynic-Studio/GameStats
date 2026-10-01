@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
-import { Card, Crumbs } from '../common/Card.tsx';
+import { Card, Crumbs, GrowText } from '../common/Card.tsx';
 import {
   MAX_RANK,
   MAX_ROUNDS,
@@ -214,7 +214,7 @@ export default function MatchEdit() {
           </label>
           <label className="field">
             备注
-            <input style={{ width: 160 }} value={note} onChange={(e) => setNote(e.target.value)} />
+            <GrowText value={note} onChange={setNote} />
           </label>
         </div>
       </Card>

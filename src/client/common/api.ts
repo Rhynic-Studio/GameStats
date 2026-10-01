@@ -1,4 +1,5 @@
 import type {
+  Comment,
   Player,
   ListItem,
   MatchDetail,
@@ -22,6 +23,24 @@ const send = (method: string, url: string, body?: unknown) =>
   }).then(j);
 
 const at = (game: string) => apiUrl(`api/${game}`);
+const api = () => apiUrl('api');
+
+/* ---------------- 登录 / 评论 ---------------- */
+
+export const me = () => fetch(`${api()}/me`).then(j) as Promise<{ user: string }>;
+
+export const login = (user: string) => send('POST', `${api()}/login`, { user }) as Promise<{ user: string }>;
+
+export const logout = () => send('POST', `${api()}/logout`) as Promise<{ user: string }>;
+
+export const comments = {
+  list: (game: string, match: number) =>
+    fetch(`${api()}/comments?game=${encodeURIComponent(game)}&match=${match}`).then(j) as Promise<Comment[]>,
+  add: (game: string, match: number, body: string, parent: number | null = null) =>
+    send('POST', `${api()}/comments`, { game, match, parent, body }) as Promise<{ id: number }>,
+  edit: (id: number, body: string) => send('PUT', `${api()}/comments/${id}`, { body }),
+  remove: (id: number) => send('DELETE', `${api()}/comments/${id}`),
+};
 
 /* ---------------- cs2 ---------------- */
 

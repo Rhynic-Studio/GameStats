@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cs2, type Cs2Lists } from '../common/api.ts';
-import { Card, Crumbs } from '../common/Card.tsx';
+import { Card, Crumbs, GrowText } from '../common/Card.tsx';
 import { roundsOf, type ListItem } from '../../shared/types.ts';
 
 /** 换单挑时该填哪几项：solo三项 三项都填，其余只填名字对得上的那一项 */
@@ -127,7 +127,7 @@ export default function MatchEdit() {
           </label>
           <label className="field">
             备注
-            <input style={{ width: 180 }} value={note} onChange={(e) => setNote(e.target.value)} />
+            <GrowText value={note} onChange={setNote} />
           </label>
         </div>
       </Card>

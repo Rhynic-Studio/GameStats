@@ -144,3 +144,12 @@ export interface CrashSummary {
   draftCount: number;
   roundsDone: number;
 }
+
+export interface Comment {
+  id: number;
+  parentId: number | null;
+  user: string;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+}

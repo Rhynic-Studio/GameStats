@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { cs2, crash } from './common/api.ts';
+import { Me, MeProvider } from './common/me.tsx';
 import { ALL_GAMES } from '../shared/games.ts';
 import Cs2List from './cs2/MatchList.tsx';
 import Cs2View from './cs2/MatchView.tsx';
@@ -44,6 +45,9 @@ function Home() {
 
   return (
     <div className="home">
+      <div className="topline">
+        <Me />
+      </div>
       <h1>game-stats</h1>
       <p className="muted">对战数据统计</p>
       <div className="game-grid">
@@ -64,31 +68,33 @@ function Home() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
+    <MeProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
 
-      {on('cs2') && (
-        <>
-          <Route path="/cs2" element={<Cs2List />} />
-          <Route path="/cs2/new" element={<Cs2Edit />} />
-          <Route path="/cs2/stats" element={<Cs2Stats />} />
-          <Route path="/cs2/:id" element={<Cs2View />} />
-          <Route path="/cs2/:id/edit" element={<Cs2Edit />} />
-        </>
-      )}
+        {on('cs2') && (
+          <>
+            <Route path="/cs2" element={<Cs2List />} />
+            <Route path="/cs2/new" element={<Cs2Edit />} />
+            <Route path="/cs2/stats" element={<Cs2Stats />} />
+            <Route path="/cs2/:id" element={<Cs2View />} />
+            <Route path="/cs2/:id/edit" element={<Cs2Edit />} />
+          </>
+        )}
 
-      {on('crash') && (
-        <>
-          <Route path="/crash" element={<CrashList />} />
-          <Route path="/crash/new" element={<CrashEdit />} />
-          <Route path="/crash/stats" element={<CrashStats />} />
-          <Route path="/crash/:id" element={<CrashView />} />
-          <Route path="/crash/:id/edit" element={<CrashEdit />} />
-        </>
-      )}
+        {on('crash') && (
+          <>
+            <Route path="/crash" element={<CrashList />} />
+            <Route path="/crash/new" element={<CrashEdit />} />
+            <Route path="/crash/stats" element={<CrashStats />} />
+            <Route path="/crash/:id" element={<CrashView />} />
+            <Route path="/crash/:id/edit" element={<CrashEdit />} />
+          </>
+        )}
 
-      {/* 被禁用的游戏、还有拼错的地址，一律回首页 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* 被禁用的游戏、还有拼错的地址，一律回首页 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </MeProvider>
   );
 }

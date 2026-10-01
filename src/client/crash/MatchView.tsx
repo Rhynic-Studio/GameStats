@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { crash } from '../common/api.ts';
 import { Card, Crumbs, DeleteButton } from '../common/Card.tsx';
+import { Comments } from '../common/Comments.tsx';
 import { MAX_ROUNDS, RULES, WIN_BY, initiativeDecider, resultLabel, scoreBefore, sideOf, winnerOf } from '../../shared/crash.ts';
 import type { CrashLists } from '../common/api.ts';
 import type { CrashMatchDetail } from '../../shared/types.ts';
@@ -82,7 +83,7 @@ export default function MatchView() {
           </label>
           <label className="field">
             备注
-            <span>{m.note || '—'}</span>
+            <span className="note">{m.note || '—'}</span>
           </label>
         </div>
 
@@ -180,6 +181,8 @@ export default function MatchView() {
           );
         })}
       </Card>
+
+      <Comments game="crash" matchId={m.id} />
 
       <p>
         <button onClick={() => nav('/crash')}>← 返回对局记录</button>

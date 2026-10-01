@@ -6,6 +6,8 @@ import { extname, join } from 'node:path';
 import { db } from './db.ts';
 import * as cs2 from './cs2.ts';
 import * as crash from './crash.ts';
+import * as comments from './comments.ts';
+import { clearUser, currentUser, setUser } from './session.ts';
 import { ALL_GAMES } from '../shared/games.ts';
 
 const app = new Hono();
@@ -62,7 +64,9 @@ if (on('cs2')) {
     return c.json({ ok: true });
   });
   api.delete('/cs2/matches/:id', (c) => {
-    cs2.deleteMatch(Number(c.req.param('id')));
+    const id = Number(c.req.param('id'));
+    cs2.deleteMatch(id);
+    comments.removeForMatch('cs2', id);
     return c.json({ ok: true });
   });
   api.post('/cs2/players', async (c) => {
@@ -94,7 +98,9 @@ if (on('crash')) {
     return c.json({ ok: true });
   });
   api.delete('/crash/matches/:id', (c) => {
-    crash.deleteMatch(Number(c.req.param('id')));
+    const id = Number(c.req.param('id'));
+    crash.deleteMatch(id);
+    comments.removeForMatch('crash', id);
     return c.json({ ok: true });
   });
   api.post('/crash/players', async (c) => {
@@ -108,6 +114,66 @@ if (on('crash')) {
   });
 
 }
+
+/* ---------------- 登录 ---------------- */
+
+api.get('/me', (c) => c.json({ user: currentUser(c) }));
+
+api.post('/login', async (c) => {
+  const user = comments.cleanUser((await c.req.json()).user);
+  setUser(c, user, prefixOf(c));
+  return c.json({ user });
+});
+
+api.post('/logout', (c) => {
+  clearUser(c, prefixOf(c));
+  return c.json({ user: '' });
+});
+
+/* ---------------- 评论 ---------------- */
+
+/** 评论挂在具体某一场上，所以先得确认这个游戏开着 —— 关掉的游戏不该还能发评论进来 */
+function gameOf(raw: unknown): string {
+  const slug = String(raw ?? '');
+  if (!on(slug)) throw new Error(`不认识的游戏：${slug}`);
+  return slug;
+}
+
+/** 对局没了评论就该跟着没，所以发之前先看这一场在不在 */
+const matchExists = (game: string, id: number) =>
+  Boolean(game === 'cs2' ? cs2.getMatch(id) : crash.getMatch(id));
+
+api.get('/comments', (c) => {
+  const game = gameOf(c.req.query('game'));
+  return c.json(comments.listComments(game, Number(c.req.query('match'))));
+});
+
+api.post('/comments', async (c) => {
+  const { game: slug, match, parent, body } = await c.req.json();
+  const game = gameOf(slug);
+  const matchId = Number(match);
+  if (!matchExists(game, matchId)) return c.json({ error: '对局不存在' }, 404);
+
+  // 没登录就按匿名发：名字留空存着，显示的时候才落成「匿名」。
+  // 空名字和任何真名字都不相等，所以匿名的那条谁也编辑不了。
+  return c.json({ id: comments.addComment(game, matchId, parent, currentUser(c), body) });
+});
+
+api.put('/comments/:id', async (c) => {
+  const user = currentUser(c);
+  if (!user) return c.json({ error: '先登录' }, 401);
+
+  comments.editComment(Number(c.req.param('id')), user, (await c.req.json()).body);
+  return c.json({ ok: true });
+});
+
+api.delete('/comments/:id', (c) => {
+  const user = currentUser(c);
+  if (!user) return c.json({ error: '先登录' }, 401);
+
+  comments.removeComment(Number(c.req.param('id')), user);
+  return c.json({ ok: true });
+});
 
 app.route('/api', api);
 
@@ -134,7 +200,12 @@ function prefixOf(c: { req: { header: (k: string) => string | undefined; url: st
     return `/${forwarded.replace(/^\/+|\/+$/g, '')}/`;
   }
 
-  const segments = new URL(c.req.url).pathname.split('/').filter(Boolean);
+  // 接口请求的路径是「前缀 + /api/…」，/api 及其后面都不是前缀的一部分。
+  // 不先砍掉的话，根部署下的 /api/login 会被算成挂在 /api/login/ 上。
+  const all = new URL(c.req.url).pathname.split('/').filter(Boolean);
+  const api = all.indexOf('api');
+  const segments = api === -1 ? all : all.slice(0, api);
+
   const at = segments.findIndex((s) => KNOWN_SLUGS.includes(s));
   const before = at === -1 ? segments : segments.slice(0, at);
   if (before.length > 0) return `/${before.join('/')}/`;
@@ -153,7 +224,13 @@ app.use('*', async (c, next) => {
   if (at > 0) {
     const url = new URL(c.req.url);
     url.pathname = path.slice(at);
-    return app.fetch(new Request(url, c.req.raw));
+
+    const req = new Request(url, c.req.raw);
+    // 前缀是在这一步砍掉的，后面再想知道「挂在哪儿」就只能靠这行说明。
+    // 代理已经说过前缀的情况就不覆盖它。
+    if (!req.headers.has('x-forwarded-prefix')) req.headers.set('x-forwarded-prefix', path.slice(0, at));
+
+    return app.fetch(req);
   }
   await next();
 });

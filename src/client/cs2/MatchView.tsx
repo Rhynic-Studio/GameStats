@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cs2, type Cs2Lists } from '../common/api.ts';
 import { Card, Crumbs, DeleteButton } from '../common/Card.tsx';
+import { Comments } from '../common/Comments.tsx';
 import { roundsOf } from '../../shared/types.ts';
 import type { MatchDetail } from '../../shared/types.ts';
 
@@ -72,7 +73,7 @@ export default function MatchView() {
           </label>
           <label className="field">
             备注
-            <span>{m.note || '—'}</span>
+            <span className="note">{m.note || '—'}</span>
           </label>
         </div>
         <table>
@@ -104,6 +105,8 @@ export default function MatchView() {
           </tfoot>
         </table>
       </Card>
+
+      <Comments game="cs2" matchId={m.id} />
 
       <p>
         <button onClick={() => nav('/cs2')}>← 返回对局记录</button>
