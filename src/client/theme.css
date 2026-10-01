@@ -304,6 +304,19 @@ label.field {
 }
 
 /* 备注里换的行，显示时照原样换 */
+/* 备注列把剩下的宽度都吃掉；按内容占行，最多三行，再多就省略号，悬停看全文 */
+td.note {
+  width: 100%;
+}
+
+td.note .clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
 .note {
   white-space: pre-wrap;
 }
