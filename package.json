@@ -1,7 +1,7 @@
 {
   "name": "game-stats",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "description": "多游戏对战数据统计站（内网人工录入）",
   "scripts": {
@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -27,7 +26,6 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4",
-    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "vite": "^8.3.0"
   },
